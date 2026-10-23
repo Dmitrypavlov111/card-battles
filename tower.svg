@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 200" width="120" height="200">
+  <defs>
+    <linearGradient id="towerGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#b45309" />
+      <stop offset="50%" stop-color="#78350f" />
+      <stop offset="100%" stop-color="#451a03" />
+    </linearGradient>
+    <linearGradient id="roofGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#d97706" />
+      <stop offset="50%" stop-color="#b45309" />
+      <stop offset="100%" stop-color="#78350f" />
+    </linearGradient>
+  </defs>
+  <!-- Flag on spire -->
+  <line x1="60" y1="5" x2="60" y2="35" stroke="#fef08a" stroke-width="2" />
+  <polygon points="60,8 85,15 60,22" fill="#10b981" stroke="#34d399" stroke-width="1" />
+  
+  <!-- Spire Roof -->
+  <polygon points="60,25 25,65 95,65" fill="url(#roofGrad)" stroke="#f59e0b" stroke-width="2" />
+
+  <!-- Battlements / Merlons -->
+  <rect x="25" y="65" width="14" height="12" fill="#92400e" stroke="#d97706" stroke-width="1.5" />
+  <rect x="45" y="65" width="14" height="12" fill="#92400e" stroke="#d97706" stroke-width="1.5" />
+  <rect x="65" y="65" width="14" height="12" fill="#92400e" stroke="#d97706" stroke-width="1.5" />
+  <rect x="85" y="65" width="14" height="12" fill="#92400e" stroke="#d97706" stroke-width="1.5" />
+
+  <!-- Main Tower Trunk -->
+  <rect x="25" y="75" width="70" height="115" rx="2" fill="url(#towerGrad)" stroke="#f59e0b" stroke-width="2" />
+
+  <!-- Stone Brick Lines -->
+  <line x1="25" y1="95" x2="95" y2="95" stroke="#f59e0b" stroke-opacity="0.3" stroke-width="1" />
+  <line x1="25" y1="120" x2="95" y2="120" stroke="#f59e0b" stroke-opacity="0.3" stroke-width="1" />
+  <line x1="25" y1="145" x2="95" y2="145" stroke="#f59e0b" stroke-opacity="0.3" stroke-width="1" />
+  <line x1="25" y1="165" x2="95" y2="165" stroke="#f59e0b" stroke-opacity="0.3" stroke-width="1" />
+
+  <!-- Arched Windows -->
+  <path d="M 52 105 A 8 8 0 0 1 68 105 L 68 120 L 52 120 Z" fill="#020617" stroke="#fbbf24" stroke-width="1.5" />
+  <line x1="60" y1="98" x2="60" y2="120" stroke="#fbbf24" stroke-width="1" />
+
+  <!-- Fortified Iron Gate -->
+  <path d="M 45 155 A 15 15 0 0 1 75 155 L 75 190 L 45 190 Z" fill="#18181b" stroke="#f59e0b" stroke-width="2" />
+  <line x1="55" y1="143" x2="55" y2="190" stroke="#71717a" stroke-width="1.5" />
+  <line x1="65" y1="143" x2="65" y2="190" stroke="#71717a" stroke-width="1.5" />
+</svg>

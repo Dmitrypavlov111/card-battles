@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 140 120" width="140" height="120">
+  <defs>
+    <linearGradient id="wallGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#0e7490" />
+      <stop offset="40%" stop-color="#155e75" />
+      <stop offset="100%" stop-color="#083344" />
+    </linearGradient>
+  </defs>
+  <!-- Merlons / Crenellations -->
+  <rect x="15" y="15" width="20" height="15" rx="1" fill="#155e75" stroke="#22d3ee" stroke-width="2" />
+  <rect x="45" y="15" width="20" height="15" rx="1" fill="#155e75" stroke="#22d3ee" stroke-width="2" />
+  <rect x="75" y="15" width="20" height="15" rx="1" fill="#155e75" stroke="#22d3ee" stroke-width="2" />
+  <rect x="105" y="15" width="20" height="15" rx="1" fill="#155e75" stroke="#22d3ee" stroke-width="2" />
+
+  <!-- Main Wall Body -->
+  <rect x="10" y="28" width="120" height="82" rx="2" fill="url(#wallGrad)" stroke="#22d3ee" stroke-width="2" />
+
+  <!-- Masonry Brick Layout Pattern -->
+  <line x1="10" y1="52" x2="130" y2="52" stroke="#67e8f9" stroke-opacity="0.35" stroke-width="1.5" />
+  <line x1="10" y1="78" x2="130" y2="78" stroke="#67e8f9" stroke-opacity="0.35" stroke-width="1.5" />
+  <line x1="10" y1="100" x2="130" y2="100" stroke="#67e8f9" stroke-opacity="0.35" stroke-width="1.5" />
+
+  <line x1="45" y1="28" x2="45" y2="52" stroke="#67e8f9" stroke-opacity="0.35" stroke-width="1.5" />
+  <line x1="95" y1="28" x2="95" y2="52" stroke="#67e8f9" stroke-opacity="0.35" stroke-width="1.5" />
+
+  <line x1="25" y1="52" x2="25" y2="78" stroke="#67e8f9" stroke-opacity="0.35" stroke-width="1.5" />
+  <line x1="70" y1="52" x2="70" y2="78" stroke="#67e8f9" stroke-opacity="0.35" stroke-width="1.5" />
+  <line x1="115" y1="52" x2="115" y2="78" stroke="#67e8f9" stroke-opacity="0.35" stroke-width="1.5" />
+
+  <line x1="45" y1="78" x2="45" y2="100" stroke="#67e8f9" stroke-opacity="0.35" stroke-width="1.5" />
+  <line x1="95" y1="78" x2="95" y2="100" stroke="#67e8f9" stroke-opacity="0.35" stroke-width="1.5" />
+
+  <!-- Fortification Spikes / Shield Emblem -->
+  <polygon points="70,55 78,65 70,82 62,65" fill="#0891b2" stroke="#a5f3fc" stroke-width="1.5" />
+</svg>
