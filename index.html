@@ -400,46 +400,92 @@
   <div id="mainMenuModal" class="fixed inset-0 bg-slate-950/95 backdrop-blur-md z-50 flex items-center justify-center p-3 overflow-y-auto">
     <div class="bg-gradient-to-b from-slate-900 via-slate-900 to-slate-950 border-2 border-amber-500/60 rounded-3xl max-w-md w-full p-4 sm:p-5 shadow-2xl text-slate-100 my-auto">
       
-      <div class="text-center mb-3">
-        <div class="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-amber-500/15 border border-amber-400/40 text-amber-300 text-[11px] font-extrabold mb-1">
-          <span>🏰</span> <span>ОНЛАЙН БИТВА БАШЕН</span>
+      <!-- Top Lobby Header with Live Online Count -->
+      <div class="flex items-center justify-between gap-2 mb-2.5">
+        <div class="min-w-0">
+          <div class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/15 border border-amber-400/40 text-amber-300 text-[10px] font-extrabold">
+            <span>🏰</span> <span>ОНЛАЙН ЛОББИ</span>
+          </div>
+          <h1 class="font-fantasy text-base sm:text-xl font-black text-amber-300 leading-tight truncate mt-0.5">
+            КАРТОЧНЫЕ БАТАЛИИ
+          </h1>
         </div>
-        <h1 class="font-fantasy text-xl sm:text-2xl font-black text-amber-300 leading-tight">
-          КАРТОЧНЫЕ БАТАЛИИ
-        </h1>
+
+        <!-- Live Online Players Counter Badge -->
+        <div class="flex items-center gap-1.5 bg-emerald-950/90 border-2 border-emerald-500/70 px-2.5 py-1 rounded-2xl shadow shrink-0">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+          <div class="text-left leading-tight">
+            <div class="text-[9px] text-emerald-300 font-bold uppercase">Сейчас в сети</div>
+            <div class="text-xs sm:text-sm font-black text-white font-mono"><span id="lobbyOnlineCountNum">1</span> чел.</div>
+          </div>
+          <button id="btnRefreshLobby" class="ml-1 w-6 h-6 rounded-lg bg-emerald-800/70 hover:bg-emerald-700 text-emerald-200 flex items-center justify-center text-xs transition" title="Обновить список игроков">
+            🔄
+          </button>
+        </div>
       </div>
 
-      <!-- Player Mini Dashboard -->
-      <div class="bg-slate-950/90 border border-slate-800 rounded-2xl p-2.5 mb-3 flex items-center justify-between">
+      <!-- Player Mini Dashboard + My Lobby ID -->
+      <div class="bg-slate-950/90 border border-slate-800 rounded-2xl p-2 mb-2.5 flex items-center justify-between gap-2">
         <div class="flex items-center gap-2 min-w-0">
-          <div id="menuPlayerAvatar" class="w-10 h-10 rounded-xl bg-amber-500/20 border-2 border-amber-400 flex items-center justify-center text-xl shrink-0">
+          <div id="menuPlayerAvatar" class="w-9 h-9 rounded-xl bg-amber-500/20 border-2 border-amber-400 flex items-center justify-center text-lg shrink-0">
             👑
           </div>
           <div class="min-w-0">
-            <div id="menuPlayerName" class="font-extrabold text-sm text-white truncate">Полководец</div>
-            <div class="text-[11px] text-slate-400 flex items-center gap-1.5">
+            <div class="flex items-center gap-1.5">
+              <span id="menuPlayerName" class="font-extrabold text-xs sm:text-sm text-white truncate">Полководец</span>
+              <span id="lobbyMyIdBadge" class="text-[9px] font-mono bg-indigo-950 text-indigo-300 border border-indigo-500/40 px-1.5 py-0.2 rounded shrink-0">ID: ...</span>
+            </div>
+            <div class="text-[10px] text-slate-400 flex items-center gap-1.5">
               <span>🏆 <b id="menuPlayerRating" class="text-amber-300">1000</b></span>
               <span>•</span>
               <span>Побед: <b id="menuPlayerWins" class="text-emerald-400">0</b></span>
             </div>
           </div>
         </div>
-        <div class="text-right shrink-0 ml-2">
+        <div class="text-right shrink-0">
           <div class="text-[9px] uppercase text-slate-400 font-bold">Баланс</div>
-          <div id="menuTokenBalance" class="text-sm font-black text-amber-300 font-mono">🪙 250</div>
+          <div id="menuTokenBalance" class="text-xs sm:text-sm font-black text-amber-300 font-mono">🪙 250</div>
         </div>
       </div>
 
-      <!-- PRIMARY ACTION: AUTO-MATCHMAKING -->
-      <div class="space-y-2 mb-3">
-        <button id="btnStartAutoMatch" class="w-full py-3 px-4 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 font-black text-sm sm:text-base tracking-wide shadow-lg transition flex items-center justify-center gap-2">
-          <span>⚔️</span>
-          <span>НАЙТИ СОПЕРНИКА (В БОЙ)</span>
-        </button>
+      <!-- =============================================================== -->
+      <!-- LIVE ONLINE PLAYERS LOBBY (CLICK A PLAYER TO CHALLENGE!)        -->
+      <!-- =============================================================== -->
+      <div class="bg-slate-950/95 border-2 border-indigo-500/60 rounded-2xl p-2.5 mb-2.5 shadow-inner">
+        <div class="flex items-center justify-between gap-1 mb-1.5">
+          <div class="text-[11px] font-extrabold text-indigo-300 flex items-center gap-1">
+            <span>🌐</span> <span>ИГРОКИ В ЛОББИ (нажмите для вызова):</span>
+          </div>
+          <span id="lobbyMeshStatusText" class="text-[9px] font-mono text-emerald-400">● Сеть активна</span>
+        </div>
 
+        <!-- Add Player to Lobby Bar (By ID or via Telegram Invite) -->
+        <div class="flex items-center gap-1 mb-2">
+          <input id="inputAddLobbyFriend" type="text" placeholder="Вставьте ID друга (напр. CB_...)" class="flex-1 min-w-0 bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-1.5 text-[11px] font-mono text-white uppercase focus:outline-none focus:border-sky-400">
+          <button id="btnAddPlayerById" class="px-2.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-black text-[11px] shrink-0 transition shadow">
+            ➕ В лобби
+          </button>
+          <button id="btnCopyMyLobbyId" class="px-2 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 font-bold text-[10px] shrink-0 transition" title="Скопировать свой ID">
+            📋 Мой ID
+          </button>
+        </div>
+
+        <!-- Scrollable List of Online Players -->
+        <div id="lobbyPlayersList" class="space-y-1.5 max-h-[165px] overflow-y-auto pr-0.5">
+          <!-- Populated dynamically by renderLobbyPlayersList() -->
+        </div>
+      </div>
+
+      <!-- PRIMARY ACTIONS: ADD FRIEND FROM TELEGRAM OR QUICK MATCH -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-1.5 mb-2.5">
         <button id="btnMenuInviteDuel" class="w-full py-2.5 px-3 rounded-2xl bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white font-extrabold text-xs shadow transition flex items-center justify-center gap-1.5">
           <span>✈️</span>
           <span>ВЫЗВАТЬ ДРУГА В TELEGRAM (+250 🪙)</span>
+        </button>
+
+        <button id="btnStartAutoMatch" class="w-full py-2.5 px-3 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 font-black text-xs tracking-wide shadow-lg transition flex items-center justify-center gap-1.5">
+          <span>⚔️</span>
+          <span>НАЙТИ СОПЕРНИКА (В БОЙ)</span>
         </button>
       </div>
 
@@ -534,6 +580,65 @@
         </button>
         <button id="btnCancelMatchmaking" class="w-full py-2 rounded-xl bg-slate-950 hover:bg-slate-800 text-slate-400 hover:text-white font-bold text-xs transition">
           Отмена
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- MODAL: OUTGOING DUEL CHALLENGE (WAITING FOR PLAYER TO ACCEPT/DECLINE) -->
+  <!-- ===================================================================== -->
+  <div id="outgoingChallengeModal" class="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-slate-900 border-2 border-amber-500/80 rounded-3xl max-w-sm w-full p-5 text-center shadow-2xl">
+      <div id="outgoingChallengeIcon" class="w-16 h-16 mx-auto mb-2.5 rounded-full bg-amber-500/20 border-2 border-amber-400 flex items-center justify-center text-3xl animate-pulse">
+        ⚔️
+      </div>
+      <h2 id="outgoingChallengeTitle" class="font-fantasy text-lg font-black text-amber-300 mb-1">Вызов отправлен!</h2>
+      <p id="outgoingChallengeSubtitle" class="text-xs text-slate-200 mb-3">Ожидаем ответа от игрока...</p>
+
+      <div class="bg-slate-950 rounded-2xl p-3 border border-slate-800 mb-4 text-xs space-y-1">
+        <div class="flex justify-between items-center">
+          <span class="text-slate-400">Соперник:</span>
+          <span id="outgoingTargetName" class="text-white font-extrabold">Игрок</span>
+        </div>
+        <div class="flex justify-between items-center">
+          <span class="text-slate-400">Ожидание ответа:</span>
+          <span id="outgoingChallengeTimer" class="text-amber-300 font-mono font-bold">20с</span>
+        </div>
+      </div>
+
+      <button id="btnCancelOutgoingChallenge" class="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-rose-900/80 text-slate-200 hover:text-white font-bold text-xs transition">
+        Отменить вызов
+      </button>
+    </div>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- MODAL: INCOMING DUEL CHALLENGE (ACCEPT OR DECLINE!)                   -->
+  <!-- ===================================================================== -->
+  <div id="incomingChallengeModal" class="fixed inset-0 bg-black/90 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-gradient-to-b from-slate-900 via-indigo-950 to-slate-950 border-2 border-emerald-400 rounded-3xl max-w-sm w-full p-5 text-center shadow-2xl">
+      <div class="inline-flex items-center gap-1 px-3 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-400/50 text-emerald-300 text-[10px] font-black mb-2 animate-bounce">
+        <span>🔔</span> <span>ВХОДЯЩИЙ ВЫЗОВ НА ДУЭЛЬ</span>
+      </div>
+
+      <div class="w-16 h-16 mx-auto mb-2 rounded-2xl bg-amber-500/20 border-2 border-amber-400 flex items-center justify-center text-3xl shadow-lg" id="incomingChallengerAvatar">
+        👑
+      </div>
+
+      <h2 class="font-fantasy text-lg font-black text-white mb-0.5" id="incomingChallengerName">Игрок</h2>
+      <div class="text-xs font-mono text-amber-300 font-bold mb-2" id="incomingChallengerRating">Рейтинг: 🏆 1000</div>
+
+      <p class="text-xs text-slate-200 mb-3 bg-slate-950/80 border border-slate-800 rounded-xl p-2.5">
+        Вызывает вас сразиться <b>1 на 1</b> в битве башен! Принять вызов? (<span id="incomingChallengeTimer" class="text-amber-300 font-mono font-bold">20с</span>)
+      </p>
+
+      <div class="grid grid-cols-2 gap-2.5">
+        <button id="btnAcceptChallenge" class="py-3 px-3 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 font-black text-xs sm:text-sm shadow-lg transition flex items-center justify-center gap-1">
+          <span>✅</span> <span>СОГЛАСИТЬСЯ</span>
+        </button>
+        <button id="btnDeclineChallenge" class="py-3 px-3 rounded-2xl bg-rose-950/90 hover:bg-rose-800 border border-rose-500/60 text-rose-200 font-extrabold text-xs sm:text-sm transition flex items-center justify-center gap-1">
+          <span>❌</span> <span>ОТКАЗАТЬСЯ</span>
         </button>
       </div>
     </div>
@@ -1496,8 +1601,8 @@
       playSound('coin');
       triggerHaptic('success');
 
-      // Put sender immediately into "Waiting for Friend (Auto-Start Battle)" mode (NO BOT!)
-      startWaitingForInvitedFriend(roomId);
+      // Keep sender in the Online Lobby and scan for the friend so they appear in the Lobby immediately!
+      scanLobbyNodesAndFriends();
 
       if (window.Telegram && window.Telegram.WebApp && typeof window.Telegram.WebApp.openTelegramLink === 'function') {
         window.Telegram.WebApp.openTelegramLink(tgShareUrl);
@@ -1577,6 +1682,566 @@
       } catch(e) {}
     }
 
+    // =========================================================================
+    // LIVE GLOBAL ONLINE LOBBY: PRESENCE MESH + CLICK TO CHALLENGE (ACCEPT/DECLINE)
+    // =========================================================================
+    const LOBBY_SLOTS_COUNT = 6;
+    const LobbyState = {
+      // Map of peerId -> { peerId, name, avatar, rating, status: 'free'|'busy', isHuman: true, lastSeen, conn }
+      onlinePeers: {},
+      myLobbySlotPeer: null,
+      myLobbySlotIndex: 0,
+      discoveryInterval: null,
+      outgoingChallenge: null, // { targetPeerId, targetName, timer, secondsLeft, conn }
+      incomingChallenge: null  // { fromPeerId, fromName, fromAvatar, fromRating, timer, secondsLeft, conn }
+    };
+
+    function getSavedFriendsIds() {
+      try {
+        const raw = localStorage.getItem('cb_saved_friends_ids');
+        if (raw) return JSON.parse(raw);
+      } catch(e) {}
+      return [];
+    }
+
+    function saveFriendId(peerId) {
+      if (!peerId || peerId === getOrCreateMyRoomId()) return;
+      try {
+        const list = getSavedFriendsIds();
+        if (!list.includes(peerId)) {
+          list.unshift(peerId);
+          localStorage.setItem('cb_saved_friends_ids', JSON.stringify(list.slice(0, 15)));
+        }
+      } catch(e) {}
+    }
+
+    function buildMyPresencePayload() {
+      const mainMenu = document.getElementById('mainMenuModal');
+      const isInMenu = mainMenu && !mainMenu.classList.contains('hidden');
+      return {
+        type: 'lobby_presence',
+        peerId: getOrCreateMyRoomId(),
+        name: UserAccount.name,
+        avatar: UserAccount.avatar,
+        rating: UserAccount.rating,
+        status: (GameState.matchStarted && !isInMenu && !GameState.isGameOver) ? 'busy' : 'free',
+        ts: Date.now()
+      };
+    }
+
+    function registerLobbyConnection(conn) {
+      if (!conn) return;
+      conn.on('open', () => {
+        try {
+          conn.send(buildMyPresencePayload());
+          // Also share known online human peers so everyone builds the full lobby roster
+          const roster = Object.values(LobbyState.onlinePeers)
+            .filter(p => p.isHuman && (Date.now() - p.lastSeen < 45000))
+            .map(p => ({
+              peerId: p.peerId,
+              name: p.name,
+              avatar: p.avatar,
+              rating: p.rating,
+              status: p.status
+            }));
+          if (roster.length > 0) {
+            conn.send({ type: 'lobby_roster', players: roster });
+          }
+        } catch(e) {}
+      });
+
+      conn.on('data', (data) => {
+        handleLobbyOrGamePacket(conn, data);
+      });
+
+      conn.on('close', () => {
+        // Mark peer offline if it was a lobby peer
+        for (const pid of Object.keys(LobbyState.onlinePeers)) {
+          if (LobbyState.onlinePeers[pid].conn === conn) {
+            delete LobbyState.onlinePeers[pid];
+            renderLobbyPlayersList();
+          }
+        }
+      });
+    }
+
+    function handleLobbyOrGamePacket(conn, data) {
+      if (!data || !data.type) return;
+
+      if (data.type === 'lobby_presence') {
+        if (data.peerId && data.peerId !== getOrCreateMyRoomId()) {
+          LobbyState.onlinePeers[data.peerId] = {
+            peerId: data.peerId,
+            name: data.name || 'Игрок',
+            avatar: data.avatar || '👑',
+            rating: data.rating || 1000,
+            status: data.status || 'free',
+            isHuman: true,
+            lastSeen: Date.now(),
+            conn: conn
+          };
+          saveFriendId(data.peerId);
+          renderLobbyPlayersList();
+        }
+      }
+      else if (data.type === 'lobby_roster' && Array.isArray(data.players)) {
+        let changed = false;
+        data.players.forEach(p => {
+          if (p.peerId && p.peerId !== getOrCreateMyRoomId() && !LobbyState.onlinePeers[p.peerId]) {
+            LobbyState.onlinePeers[p.peerId] = {
+              peerId: p.peerId,
+              name: p.name || 'Игрок',
+              avatar: p.avatar || '👑',
+              rating: p.rating || 1000,
+              status: p.status || 'free',
+              isHuman: true,
+              lastSeen: Date.now(),
+              conn: null
+            };
+            changed = true;
+            // Connect directly to discovered peer
+            if (peer && peer.open) {
+              try {
+                const directConn = peer.connect(p.peerId, { reliable: true });
+                registerLobbyConnection(directConn);
+              } catch(e) {}
+            }
+          }
+        });
+        if (changed) renderLobbyPlayersList();
+      }
+      else if (data.type === 'duel_challenge') {
+        onReceiveDuelChallenge(conn, data);
+      }
+      else if (data.type === 'duel_accepted') {
+        onDuelChallengeAccepted(conn, data);
+      }
+      else if (data.type === 'duel_declined') {
+        onDuelChallengeDeclined(data);
+      }
+      else if (data.type === 'handshake' || data.type === 'action') {
+        handleNetworkMessage(data);
+      }
+    }
+
+    // Claim one of CB_LOBBY_NODE_1..6 so other players automatically find us without knowing our ID
+    function claimLobbySlotNode(slotIdx) {
+      if (slotIdx > LOBBY_SLOTS_COUNT) return;
+      if (LobbyState.myLobbySlotPeer && !LobbyState.myLobbySlotPeer.destroyed) return;
+
+      const slotId = `CB_LOBBY_NODE_${slotIdx}`;
+      try {
+        const slotPeer = new Peer(slotId, { debug: 0, config: PEER_ICE_CONFIG });
+        slotPeer.on('open', () => {
+          LobbyState.myLobbySlotPeer = slotPeer;
+          LobbyState.myLobbySlotIndex = slotIdx;
+          const st = document.getElementById('lobbyMeshStatusText');
+          if (st) st.innerText = `● Лобби #${slotIdx} активно`;
+        });
+        slotPeer.on('connection', (conn) => {
+          registerLobbyConnection(conn);
+        });
+        slotPeer.on('error', () => {
+          try { slotPeer.destroy(); } catch(e) {}
+          claimLobbySlotNode(slotIdx + 1);
+        });
+      } catch(e) {}
+    }
+
+    function scanLobbyNodesAndFriends() {
+      const myId = getOrCreateMyRoomId();
+      const badge = document.getElementById('lobbyMyIdBadge');
+      if (badge) badge.innerText = `ID: ${myId}`;
+
+      if (!peer || peer.destroyed || peer.disconnected) {
+        initPeerJS();
+      }
+      if (!LobbyState.myLobbySlotPeer || LobbyState.myLobbySlotPeer.destroyed) {
+        claimLobbySlotNode(1);
+      }
+      if (!peer || !peer.open) {
+        renderLobbyPlayersList();
+        return;
+      }
+
+      // Ping all active connections with fresh presence
+      const presence = buildMyPresencePayload();
+      Object.values(LobbyState.onlinePeers).forEach(p => {
+        if (p.conn && p.conn.open) {
+          try { p.conn.send(presence); } catch(e) {}
+        } else if (p.peerId && p.isHuman) {
+          try {
+            const c = peer.connect(p.peerId, { reliable: true });
+            registerLobbyConnection(c);
+          } catch(e) {}
+        }
+      });
+
+      // Scan all 6 global lobby slots
+      for (let i = 1; i <= LOBBY_SLOTS_COUNT; i++) {
+        if (i === LobbyState.myLobbySlotIndex) continue;
+        const slotId = `CB_LOBBY_NODE_${i}`;
+        try {
+          const c = peer.connect(slotId, { reliable: true });
+          registerLobbyConnection(c);
+        } catch(e) {}
+      }
+
+      // Also scan saved friends IDs
+      getSavedFriendsIds().forEach(fid => {
+        if (fid && fid !== myId && (!LobbyState.onlinePeers[fid] || !LobbyState.onlinePeers[fid].conn || !LobbyState.onlinePeers[fid].conn.open)) {
+          try {
+            const c = peer.connect(fid, { reliable: true });
+            registerLobbyConnection(c);
+          } catch(e) {}
+        }
+      });
+
+      renderLobbyPlayersList();
+    }
+
+    function renderLobbyPlayersList() {
+      const listEl = document.getElementById('lobbyPlayersList');
+      const countEl = document.getElementById('lobbyOnlineCountNum');
+      if (!listEl) return;
+
+      const now = Date.now();
+      // Prune stale human peers (> 35s without heartbeat and closed conn)
+      Object.keys(LobbyState.onlinePeers).forEach(pid => {
+        const p = LobbyState.onlinePeers[pid];
+        if (p.isHuman && (now - p.lastSeen > 35000) && (!p.conn || !p.conn.open)) {
+          delete LobbyState.onlinePeers[pid];
+        }
+      });
+
+      const realPlayers = Object.values(LobbyState.onlinePeers).filter(p => p.isHuman);
+      // Total online = You (1) + real connected players + active arena challengers
+      const botsInLobby = ONLINE_OPPONENTS_POOL.slice(0, 3);
+      const totalOnlineCount = 1 + realPlayers.length + botsInLobby.length;
+      if (countEl) countEl.innerText = String(totalOnlineCount);
+
+      listEl.innerHTML = '';
+
+      // 1. Render Real Human Players at the very top with bright green badge!
+      realPlayers.forEach(p => {
+        const isFree = p.status !== 'busy';
+        const row = document.createElement('div');
+        row.className = "p-2 rounded-xl bg-emerald-950/60 hover:bg-emerald-900/70 border-2 border-emerald-400/80 flex items-center justify-between gap-2 cursor-pointer transition shadow";
+        row.innerHTML = `
+          <div class="flex items-center gap-2 min-w-0">
+            <div class="w-8 h-8 rounded-lg bg-emerald-500/20 border border-emerald-400 flex items-center justify-center text-base shrink-0">
+              ${p.avatar || '👑'}
+            </div>
+            <div class="min-w-0 text-left">
+              <div class="flex items-center gap-1">
+                <span class="text-xs font-black text-white truncate">${p.name}</span>
+                <span class="text-[8px] font-black px-1.5 py-0.2 rounded bg-emerald-500 text-slate-950 uppercase shrink-0">🟢 ИГРОК</span>
+              </div>
+              <div class="text-[10px] text-emerald-300 font-mono">
+                🏆 ${p.rating || 1000} • ${isFree ? 'Свободен для боя' : 'Сейчас в бою'}
+              </div>
+            </div>
+          </div>
+          <button type="button" class="px-2.5 py-1.5 rounded-xl ${isFree ? 'bg-emerald-400 hover:bg-emerald-300 text-slate-950' : 'bg-slate-800 text-slate-400'} font-black text-[11px] shrink-0 shadow transition">
+            ${isFree ? '⚔️ Вызвать' : 'В бою'}
+          </button>
+        `;
+        row.addEventListener('click', () => {
+          sendDuelChallengeToPlayer(p);
+        });
+        listEl.appendChild(row);
+      });
+
+      // 2. Render Active Arena Players (so user can always click any player in lobby & see accept/decline)
+      botsInLobby.forEach((b, idx) => {
+        const oppRating = Math.max(850, UserAccount.rating + b.ratingOffset);
+        const row = document.createElement('div');
+        row.className = "p-2 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-slate-700/90 flex items-center justify-between gap-2 cursor-pointer transition";
+        row.innerHTML = `
+          <div class="flex items-center gap-2 min-w-0">
+            <div class="w-8 h-8 rounded-lg bg-slate-800 border border-amber-500/40 flex items-center justify-center text-base shrink-0">
+              ${b.avatar}
+            </div>
+            <div class="min-w-0 text-left">
+              <div class="flex items-center gap-1">
+                <span class="text-xs font-bold text-slate-100 truncate">${b.name}</span>
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0"></span>
+              </div>
+              <div class="text-[10px] text-slate-400 font-mono">
+                🏆 ${oppRating} • В лобби (Готов к дуэли)
+              </div>
+            </div>
+          </div>
+          <button type="button" class="px-2.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-[11px] shrink-0 shadow transition">
+            ⚔️ Вызвать
+          </button>
+        `;
+        row.addEventListener('click', () => {
+          sendDuelChallengeToPlayer({
+            peerId: `BOT_${idx}`,
+            name: b.name,
+            avatar: b.avatar,
+            rating: oppRating,
+            isHuman: false
+          });
+        });
+        listEl.appendChild(row);
+      });
+    }
+
+    // --- SEND DUEL CHALLENGE WHEN CLICKING A PLAYER IN THE LOBBY ---
+    function sendDuelChallengeToPlayer(targetPlayer) {
+      if (!targetPlayer) return;
+      playSound('card_play');
+      triggerHaptic('impact');
+
+      const outModal = document.getElementById('outgoingChallengeModal');
+      if (outModal) outModal.classList.remove('hidden');
+
+      document.getElementById('outgoingChallengeIcon').innerText = targetPlayer.avatar || '⚔️';
+      document.getElementById('outgoingChallengeTitle').innerText = "Вызов отправлен!";
+      document.getElementById('outgoingChallengeSubtitle').innerText = `Ждём, согласится ли ${targetPlayer.name} на бой...`;
+      document.getElementById('outgoingTargetName').innerText = `${targetPlayer.avatar || '⚔️'} ${targetPlayer.name} (🏆${targetPlayer.rating || 1000})`;
+      document.getElementById('outgoingChallengeTimer').innerText = '20с';
+
+      if (LobbyState.outgoingChallenge && LobbyState.outgoingChallenge.timer) {
+        clearInterval(LobbyState.outgoingChallenge.timer);
+      }
+
+      // If challenging a simulated lobby player, they respond in 1.5s (Accept!)
+      if (!targetPlayer.isHuman) {
+        const simTimer = setTimeout(() => {
+          document.getElementById('outgoingChallengeTitle').innerText = "✅ Вызов принят!";
+          document.getElementById('outgoingChallengeSubtitle').innerText = `${targetPlayer.name} принял вызов! Заходим в бой...`;
+          playSound('victory');
+          setTimeout(() => {
+            outModal?.classList.add('hidden');
+            document.getElementById('mainMenuModal')?.classList.add('hidden');
+            GameState.mode = 'matched';
+            GameState.p2.name = targetPlayer.name;
+            GameState.p2.avatar = targetPlayer.avatar;
+            GameState.p2.rating = targetPlayer.rating;
+            document.getElementById('modeText').innerText = 'Онлайн Бой';
+            document.getElementById('modeIcon').innerText = '⚔️';
+            initGame();
+          }, 700);
+        }, 1400);
+
+        LobbyState.outgoingChallenge = {
+          targetPeerId: targetPlayer.peerId,
+          targetName: targetPlayer.name,
+          timer: simTimer,
+          secondsLeft: 20,
+          conn: null
+        };
+        return;
+      }
+
+      // Real human player challenge over PeerJS
+      let conn = targetPlayer.conn;
+      const sendChallengePacket = (c) => {
+        try {
+          c.send({
+            type: 'duel_challenge',
+            fromPeerId: getOrCreateMyRoomId(),
+            fromName: UserAccount.name,
+            fromAvatar: UserAccount.avatar,
+            fromRating: UserAccount.rating
+          });
+        } catch(e) {}
+      };
+
+      if (conn && conn.open) {
+        sendChallengePacket(conn);
+      } else if (peer && peer.open) {
+        conn = peer.connect(targetPlayer.peerId, { reliable: true });
+        registerLobbyConnection(conn);
+        conn.on('open', () => sendChallengePacket(conn));
+      }
+
+      let secLeft = 20;
+      const timerId = setInterval(() => {
+        secLeft--;
+        const tEl = document.getElementById('outgoingChallengeTimer');
+        if (tEl) tEl.innerText = `${secLeft}с`;
+        if (secLeft <= 0) {
+          clearInterval(timerId);
+          LobbyState.outgoingChallenge = null;
+          document.getElementById('outgoingChallengeTitle').innerText = "⏱️ Время ожидания вышло";
+          document.getElementById('outgoingChallengeSubtitle').innerText = "Игрок не ответил на вызов.";
+          setTimeout(() => outModal?.classList.add('hidden'), 1500);
+        }
+      }, 1000);
+
+      LobbyState.outgoingChallenge = {
+        targetPeerId: targetPlayer.peerId,
+        targetName: targetPlayer.name,
+        timer: timerId,
+        secondsLeft: 20,
+        conn: conn
+      };
+    }
+
+    // --- RECEIVE DUEL CHALLENGE (SHOW ACCEPT / DECLINE MODAL) ---
+    function onReceiveDuelChallenge(conn, data) {
+      playSound('victory');
+      triggerHaptic('heavy');
+
+      // Also ensure challenger is in our lobby list
+      if (data.fromPeerId) {
+        LobbyState.onlinePeers[data.fromPeerId] = {
+          peerId: data.fromPeerId,
+          name: data.fromName || 'Игрок',
+          avatar: data.fromAvatar || '👑',
+          rating: data.fromRating || 1000,
+          status: 'free',
+          isHuman: true,
+          lastSeen: Date.now(),
+          conn: conn
+        };
+        renderLobbyPlayersList();
+      }
+
+      const incModal = document.getElementById('incomingChallengeModal');
+      if (incModal) incModal.classList.remove('hidden');
+
+      document.getElementById('incomingChallengerAvatar').innerText = data.fromAvatar || '👑';
+      document.getElementById('incomingChallengerName').innerText = data.fromName || 'Игрок';
+      document.getElementById('incomingChallengerRating').innerText = `Рейтинг: 🏆 ${data.fromRating || 1000}`;
+      document.getElementById('incomingChallengeTimer').innerText = '20с';
+
+      if (LobbyState.incomingChallenge && LobbyState.incomingChallenge.timer) {
+        clearInterval(LobbyState.incomingChallenge.timer);
+      }
+
+      let secLeft = 20;
+      const timerId = setInterval(() => {
+        secLeft--;
+        const tEl = document.getElementById('incomingChallengeTimer');
+        if (tEl) tEl.innerText = `${secLeft}с`;
+        if (secLeft <= 0) {
+          clearInterval(timerId);
+          declineIncomingChallenge();
+        }
+      }, 1000);
+
+      LobbyState.incomingChallenge = {
+        fromPeerId: data.fromPeerId,
+        fromName: data.fromName || 'Игрок',
+        fromAvatar: data.fromAvatar || '👑',
+        fromRating: data.fromRating || 1000,
+        timer: timerId,
+        conn: conn
+      };
+    }
+
+    function acceptIncomingChallenge() {
+      const ch = LobbyState.incomingChallenge;
+      if (!ch) return;
+      if (ch.timer) clearInterval(ch.timer);
+      LobbyState.incomingChallenge = null;
+
+      document.getElementById('incomingChallengeModal')?.classList.add('hidden');
+      document.getElementById('mainMenuModal')?.classList.add('hidden');
+      document.getElementById('onlineModal')?.classList.add('hidden');
+      document.getElementById('matchmakingModal')?.classList.add('hidden');
+
+      const startMatchWithChallenger = (activeConn) => {
+        try {
+          activeConn.send({
+            type: 'duel_accepted',
+            byPeerId: getOrCreateMyRoomId(),
+            byName: UserAccount.name,
+            byAvatar: UserAccount.avatar,
+            byRating: UserAccount.rating
+          });
+        } catch(e) {}
+
+        netConn = activeConn;
+        GameState.mode = 'online';
+        GameState.isOnlineHost = false; // Challenger is Host (1st turn), Acceptor is Guest (2nd turn)
+        GameState.p2.name = ch.fromName;
+        GameState.p2.avatar = ch.fromAvatar;
+        GameState.p2.rating = ch.fromRating;
+
+        document.getElementById('modeText').innerText = 'Дуэль с другом';
+        document.getElementById('modeIcon').innerText = '🌐';
+        playSound('victory');
+        triggerHaptic('success');
+        initGame();
+        logAction("system", `Вы приняли вызов от ${ch.fromName}! Бой начался!`);
+      };
+
+      if (ch.conn && ch.conn.open) {
+        startMatchWithChallenger(ch.conn);
+      } else if (peer && peer.open && ch.fromPeerId) {
+        const c = peer.connect(ch.fromPeerId, { reliable: true });
+        registerLobbyConnection(c);
+        c.on('open', () => startMatchWithChallenger(c));
+      }
+    }
+
+    function declineIncomingChallenge() {
+      const ch = LobbyState.incomingChallenge;
+      if (!ch) return;
+      if (ch.timer) clearInterval(ch.timer);
+      LobbyState.incomingChallenge = null;
+
+      document.getElementById('incomingChallengeModal')?.classList.add('hidden');
+      playSound('discard');
+
+      if (ch.conn && ch.conn.open) {
+        try {
+          ch.conn.send({
+            type: 'duel_declined',
+            byPeerId: getOrCreateMyRoomId(),
+            byName: UserAccount.name
+          });
+        } catch(e) {}
+      }
+    }
+
+    function onDuelChallengeAccepted(conn, data) {
+      if (LobbyState.outgoingChallenge && LobbyState.outgoingChallenge.timer) {
+        clearInterval(LobbyState.outgoingChallenge.timer);
+      }
+      LobbyState.outgoingChallenge = null;
+
+      document.getElementById('outgoingChallengeModal')?.classList.add('hidden');
+      document.getElementById('mainMenuModal')?.classList.add('hidden');
+      document.getElementById('onlineModal')?.classList.add('hidden');
+      document.getElementById('matchmakingModal')?.classList.add('hidden');
+
+      netConn = conn;
+      GameState.mode = 'online';
+      GameState.isOnlineHost = true; // Challenger goes 1st!
+      GameState.p2.name = data.byName || 'Друг';
+      GameState.p2.avatar = data.byAvatar || '⚔️';
+      GameState.p2.rating = data.byRating || 1000;
+
+      document.getElementById('modeText').innerText = 'Дуэль с другом';
+      document.getElementById('modeIcon').innerText = '🌐';
+      playSound('victory');
+      triggerHaptic('success');
+      initGame();
+      logAction("system", `${GameState.p2.name} принял ваш вызов! Бой начался!`);
+    }
+
+    function onDuelChallengeDeclined(data) {
+      if (LobbyState.outgoingChallenge && LobbyState.outgoingChallenge.timer) {
+        clearInterval(LobbyState.outgoingChallenge.timer);
+      }
+      LobbyState.outgoingChallenge = null;
+
+      playSound('discard');
+      triggerHaptic('error');
+      document.getElementById('outgoingChallengeTitle').innerText = "❌ Вызов отклонён";
+      document.getElementById('outgoingChallengeSubtitle').innerText = `Игрок ${data.byName || ''} отказался от дуэли.`;
+      setTimeout(() => {
+        document.getElementById('outgoingChallengeModal')?.classList.add('hidden');
+      }, 1800);
+    }
+
     // --- REAL P2P MATCHMAKING, INVITE BEACON & PEERJS ONLINE MULTIPLAYER ---
     let peer = null;
     let inviteBeaconPeer = null;
@@ -1603,17 +2268,40 @@
         peer.on('open', (id) => {
           const inputEl = document.getElementById('myRoomIdInput');
           if (inputEl) inputEl.value = id;
+          const badge = document.getElementById('lobbyMyIdBadge');
+          if (badge) badge.innerText = `ID: ${id}`;
           const st = document.getElementById('netStatusText');
-          if (st) st.innerText = 'Онлайн (Готов к дуэли)';
+          if (st) st.innerText = 'Онлайн (В лобби)';
+
+          scanLobbyNodesAndFriends();
 
           if (pendingInviteRoomCode) {
             const target = pendingInviteRoomCode;
             pendingInviteRoomCode = null;
-            connectToRoomFromInvite(target);
+            saveFriendId(target);
+            // Connect to the friend who invited us so we immediately appear in each other's lobby and send a duel challenge!
+            try {
+              const c = peer.connect(target, { reliable: true });
+              registerLobbyConnection(c);
+              c.on('open', () => {
+                setTimeout(() => {
+                  const friendObj = LobbyState.onlinePeers[target] || {
+                    peerId: target,
+                    name: 'Друг (' + target + ')',
+                    avatar: '👑',
+                    rating: 1000,
+                    isHuman: true,
+                    conn: c
+                  };
+                  sendDuelChallengeToPlayer(friendObj);
+                }, 400);
+              });
+            } catch(e) {}
           }
         });
 
         peer.on('connection', (conn) => {
+          registerLobbyConnection(conn);
           setupConnection(conn, true);
         });
 
@@ -2894,6 +3582,66 @@
         document.getElementById('netStatusText').innerText = 'Подключение...';
         connectToRoomFromInvite(targetId);
       });
+
+      // Online Lobby Controls & Challenge Accept/Decline Listeners
+      document.getElementById('btnRefreshLobby')?.addEventListener('click', () => {
+        playSound('card_play');
+        scanLobbyNodesAndFriends();
+      });
+
+      document.getElementById('btnCopyMyLobbyId')?.addEventListener('click', () => {
+        const myId = getOrCreateMyRoomId();
+        try { navigator.clipboard.writeText(myId); } catch(e) { document.execCommand('copy'); }
+        const btn = document.getElementById('btnCopyMyLobbyId');
+        if (btn) {
+          btn.innerText = '✓ Скопирован!';
+          setTimeout(() => btn.innerText = '📋 Мой ID', 1800);
+        }
+      });
+
+      document.getElementById('btnAddPlayerById')?.addEventListener('click', () => {
+        const inp = document.getElementById('inputAddLobbyFriend');
+        const targetId = inp ? inp.value.trim().toUpperCase() : '';
+        if (!targetId || targetId === getOrCreateMyRoomId()) return;
+        saveFriendId(targetId);
+        if (inp) inp.value = '';
+        playSound('card_play');
+        if (peer && peer.open) {
+          try {
+            const c = peer.connect(targetId, { reliable: true });
+            registerLobbyConnection(c);
+            c.on('open', () => {
+              const p = LobbyState.onlinePeers[targetId] || {
+                peerId: targetId,
+                name: `Игрок ${targetId}`,
+                avatar: '👑',
+                rating: 1000,
+                isHuman: true,
+                conn: c
+              };
+              sendDuelChallengeToPlayer(p);
+            });
+          } catch(e) {}
+        }
+        renderLobbyPlayersList();
+      });
+
+      document.getElementById('btnCancelOutgoingChallenge')?.addEventListener('click', () => {
+        if (LobbyState.outgoingChallenge && LobbyState.outgoingChallenge.timer) {
+          clearInterval(LobbyState.outgoingChallenge.timer);
+          clearTimeout(LobbyState.outgoingChallenge.timer);
+        }
+        LobbyState.outgoingChallenge = null;
+        document.getElementById('outgoingChallengeModal')?.classList.add('hidden');
+      });
+
+      document.getElementById('btnAcceptChallenge')?.addEventListener('click', () => {
+        acceptIncomingChallenge();
+      });
+
+      document.getElementById('btnDeclineChallenge')?.addEventListener('click', () => {
+        declineIncomingChallenge();
+      });
     }
 
     // --- INITIALIZE ON LOAD ---
@@ -2903,18 +3651,17 @@
       initYandexSDK();
       initTelegramApp();
       initPeerJS();
+      claimLobbySlotNode(1);
+      renderLobbyPlayersList();
+      if (LobbyState.discoveryInterval) clearInterval(LobbyState.discoveryInterval);
+      LobbyState.discoveryInterval = setInterval(scanLobbyNodesAndFriends, 4000);
+
       initDeck();
       for (let i = 0; i < 5; i++) {
         GameState.p1.hand.push(drawCard());
         GameState.p2.hand.push(drawCard());
       }
       updateUI();
-
-      if (pendingInviteRoomCode) {
-        const code = pendingInviteRoomCode;
-        pendingInviteRoomCode = null;
-        connectToRoomFromInvite(code);
-      }
     });
   </script>
 </body>
