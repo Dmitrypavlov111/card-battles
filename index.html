@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Карточные Баталии — Онлайн Битва Башен</title>
   
-    <!-- Telegram Web App SDK (TMA) -->
+  <!-- Telegram Web App SDK (TMA) -->
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <!-- Yandex Games SDK -->
   <script src="https://yandex.ru/games/sdk/v2"></script>
@@ -20,7 +20,7 @@
   <!-- Google Fonts: Cinzel & Montserrat -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Montserrat:wght@500;600;700;800;900&display=swap" rel="stylesheet">
 
   <style>
     * {
@@ -28,75 +28,86 @@
       user-select: none;
       -webkit-user-select: none;
       -webkit-touch-callout: none;
-      touch-action: manipulation;
     }
     html, body {
+      width: 100%;
+      max-width: 100vw;
       height: 100%;
       height: 100dvh;
-      overflow: hidden;
+      overflow-x: hidden;
+      overflow-y: hidden;
       margin: 0;
       padding: 0;
       font-family: 'Montserrat', sans-serif;
-      background: radial-gradient(circle at 50% 25%, #1e1b4b 0%, #0f172a 65%, #020617 100%);
+      background: radial-gradient(circle at 50% 20%, #1e1b4b 0%, #0f172a 60%, #020617 100%);
       color: #f8fafc;
+      /* Allow vertical swipe gesture at top for Telegram Mini App minimize/close */
+      touch-action: pan-y;
     }
     .font-fantasy {
       font-family: 'Cinzel', serif;
     }
 
-    /* Card styling & 3D hover */
+    /* Compact, Punchy Card Styling */
     .card-item {
-      transition: transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.18s ease, filter 0.18s ease;
+      transition: transform 0.16s ease, box-shadow 0.16s ease, filter 0.16s ease;
       transform-origin: center bottom;
+      min-width: 0;
     }
     .card-item:hover:not(.disabled) {
-      transform: translateY(-10px) scale(1.05);
+      transform: translateY(-6px) scale(1.03);
       z-index: 30;
-      box-shadow: 0 12px 24px -4px rgba(0,0,0,0.8), 0 0 16px rgba(234, 179, 8, 0.45);
+      box-shadow: 0 10px 20px -4px rgba(0,0,0,0.9), 0 0 12px rgba(250, 204, 21, 0.5);
     }
     .card-item:active:not(.disabled) {
-      transform: translateY(-4px) scale(0.98);
+      transform: translateY(-2px) scale(0.97);
     }
-    .card-item.disabled {
-      filter: grayscale(0.7) brightness(0.65);
-      cursor: not-allowed;
-      opacity: 0.75;
+    .card-item.disabled .card-play-zone {
+      filter: grayscale(0.65) brightness(0.7);
+      opacity: 0.78;
     }
     .card-item.glow-ready {
-      box-shadow: 0 0 10px 1px rgba(250, 204, 21, 0.45);
+      box-shadow: 0 0 10px 1px rgba(250, 204, 21, 0.35);
     }
 
-    /* Floating numbers */
+    /* Floating combat numbers */
     @keyframes floatCombat {
       0% { opacity: 0; transform: translateY(0) scale(0.8); }
       20% { opacity: 1; transform: translateY(-8px) scale(1.15); }
-      75% { opacity: 1; transform: translateY(-28px) scale(1); }
-      100% { opacity: 0; transform: translateY(-42px) scale(0.85); }
+      75% { opacity: 1; transform: translateY(-24px) scale(1); }
+      100% { opacity: 0; transform: translateY(-36px) scale(0.85); }
     }
     .float-text {
       animation: floatCombat 1.25s ease-out forwards;
       pointer-events: none;
-      text-shadow: 0 2px 6px rgba(0,0,0,0.9);
+      text-shadow: 0 2px 6px rgba(0,0,0,0.95);
     }
 
     /* Castle/Wall Hit Shake */
     @keyframes shakeStructure {
       0%, 100% { transform: translateX(0); }
-      20% { transform: translateX(-6px) rotate(-1deg); }
-      40% { transform: translateX(6px) rotate(1deg); }
-      60% { transform: translateX(-4px); }
-      80% { transform: translateX(4px); }
+      20% { transform: translateX(-5px) rotate(-1deg); }
+      40% { transform: translateX(5px) rotate(1deg); }
+      60% { transform: translateX(-3px); }
+      80% { transform: translateX(3px); }
     }
     .shake-anim {
-      animation: shakeStructure 0.4s ease-in-out;
+      animation: shakeStructure 0.38s ease-in-out;
     }
 
     /* Castle & Wall SVG Dynamic Heights */
     .structure-svg {
-      transition: height 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+      transition: height 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
     }
 
-    /* Custom thin scrollbar */
+    @keyframes timerPulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.06); }
+    }
+    .timer-urgent {
+      animation: timerPulse 0.6s infinite ease-in-out;
+    }
+
     ::-webkit-scrollbar {
       width: 4px;
       height: 4px;
@@ -107,640 +118,717 @@
     }
   </style>
 </head>
-<body class="flex flex-col h-full w-full overflow-hidden select-none">
+<body class="flex flex-col h-full w-full max-w-full overflow-hidden select-none">
 
   <!-- Particle VFX Canvas -->
   <canvas id="fxCanvas" class="fixed inset-0 pointer-events-none z-50"></canvas>
 
-  <!-- TOP COMPACT HEADER (Height: 46px) -->
-  <header class="h-11 sm:h-12 bg-slate-900/95 border-b border-amber-600/30 px-2 sm:px-4 flex items-center justify-between shrink-0 z-40 backdrop-blur">
+  <!-- ===================================================================== -->
+  <!-- TOP HEADER BAR (Strict Mobile Fit: Never overflows 100vw, Easy Close) -->
+  <!-- ===================================================================== -->
+  <header class="h-11 w-full bg-slate-900/95 border-b border-amber-500/30 px-2 flex items-center justify-between gap-1 shrink-0 z-40">
     
-    <!-- Left: Player Profile & Login Status -->
-    <div class="flex items-center gap-2">
-      <button id="btnProfileOpen" class="flex items-center gap-1.5 p-1 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 transition" title="Профиль игрока">
-        <div id="headerAvatar" class="w-7 h-7 rounded-md bg-amber-500/20 border border-amber-400/50 flex items-center justify-center text-sm">
-          👑
-        </div>
-        <div class="text-left hidden xs:block">
-          <div id="headerPlayerName" class="text-xs font-bold text-amber-300 leading-tight max-w-[90px] sm:max-w-[120px] truncate">Игрок</div>
-          <div class="text-[9px] text-slate-400 font-mono leading-none flex items-center gap-1">
-            <span id="headerPlayerRating">Рейтинг: 1000</span>
-          </div>
-        </div>
+    <!-- Left: Menu Button & Token Balance -->
+    <div class="flex items-center gap-1 min-w-0 shrink-0">
+      <button id="btnOpenMainMenu" class="px-2.5 py-1 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs flex items-center gap-1 shadow shrink-0" title="Главное меню">
+        <span>🏰</span>
+        <span>Меню</span>
       </button>
 
-      <!-- Game Mode Badge -->
-      <button id="btnModeSelect" class="px-2 py-1 rounded-md bg-indigo-950/70 hover:bg-indigo-900/80 border border-indigo-500/40 text-[10px] font-bold text-indigo-300 transition flex items-center gap-1">
+      <button id="btnTokenOpen" class="px-2 py-1 rounded-lg bg-amber-500/20 border border-amber-400/50 flex items-center gap-1 shrink-0" title="Бонусы и $TOWER">
+        <span class="text-xs">🪙</span>
+        <span id="headerTokenCount" class="text-[11px] font-black text-amber-300 font-mono">250</span><span class="hidden sm:inline text-[10px] font-black text-amber-300 font-mono"> $TOWER</span>
+      </button>
+
+      <!-- Desktop-only extra badges (hidden on small phones so header never overflows) -->
+      <button id="btnProfileOpen" class="hidden md:flex items-center gap-1 px-2 py-1 rounded-lg bg-slate-800 border border-slate-700 shrink-0">
+        <span id="headerAvatar" class="text-xs">👑</span>
+        <span id="headerPlayerName" class="text-xs font-bold text-amber-300 truncate max-w-[90px]">Игрок</span>
+        <span id="headerPlayerRating" class="text-[10px] text-slate-400 font-mono">Рейтинг: 1000</span>
+      </button>
+
+      <button id="btnModeSelect" class="hidden lg:flex px-2 py-1 rounded-lg bg-indigo-950/80 border border-indigo-500/40 text-[10px] font-bold text-indigo-300 items-center gap-1 shrink-0">
         <span id="modeIcon">🤖</span>
         <span id="modeText" class="hidden sm:inline">Против ИИ</span>
       </button>
-
-      <!-- Token $TOWER Badge -->
-      <button id="btnTokenOpen" class="px-2 py-0.5 sm:py-1 rounded-lg bg-gradient-to-r from-amber-500/20 via-yellow-500/25 to-amber-600/30 hover:from-amber-500/30 hover:to-amber-500/40 border border-amber-400/60 flex items-center gap-1 transition shadow cursor-pointer" title="Токеномика $TOWER и Airdrop">
-        <span class="text-xs">🪙</span>
-        <span id="headerTokenCount" class="text-[10px] sm:text-xs font-black text-amber-300 font-mono tracking-tight whitespace-nowrap">250 $TOWER</span>
-      </button>
     </div>
 
-    <!-- Center: Turn Status Banner -->
-    <div id="turnBanner" class="px-2.5 py-0.5 sm:py-1 rounded-full text-[11px] sm:text-xs font-bold tracking-wide border transition-all duration-300 bg-emerald-950/80 text-emerald-300 border-emerald-500/50 flex items-center gap-1.5 max-w-[170px] sm:max-w-none truncate shadow">
-      <span id="turnPingDot" class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping shrink-0"></span>
-      <span id="turnBannerText" class="truncate">Ваш ход</span>
+    <!-- Center: Turn Status & 20s Timer -->
+    <div class="flex items-center gap-1 min-w-0 shrink">
+      <div id="turnBanner" class="px-2 py-0.5 rounded-full text-[11px] font-extrabold border bg-emerald-950/90 text-emerald-300 border-emerald-500/60 flex items-center gap-1 truncate shadow">
+        <span id="turnPingDot" class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping shrink-0"></span>
+        <span id="turnBannerText" class="truncate">Ваш ход</span>
+      </div>
+
+      <div id="turnTimerBadge" class="px-2 py-0.5 rounded-full bg-slate-800 border border-amber-500/50 text-amber-300 font-mono font-black text-[11px] flex items-center gap-0.5 shrink-0">
+        <span>⏱️</span>
+        <span id="turnTimerSeconds">20с</span>
+      </div>
     </div>
 
-    <!-- Right Actions: Sound, Multiplayer, Rules, History -->
-    <div class="flex items-center gap-1 sm:gap-1.5">
-      <button id="btnOnlineLobby" class="px-2 py-1 rounded-md bg-amber-600/20 hover:bg-amber-600/30 text-amber-300 border border-amber-500/40 text-[10px] sm:text-xs font-bold transition flex items-center gap-1" title="Сетевая игра онлайн">
+    <!-- Right: Compact Action Icons + Minimize/Close App Button -->
+    <div class="flex items-center gap-1 shrink-0">
+      <button id="btnOnlineLobby" class="px-2 py-1 rounded-lg bg-sky-600 hover:bg-sky-500 text-white text-[11px] font-extrabold flex items-center gap-1 shrink-0" title="Дуэль с другом">
         🌐 <span class="hidden md:inline">Мультиплеер</span>
       </button>
-      <button id="btnAudioToggle" class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-400 border border-slate-700 flex items-center justify-center text-xs transition" title="Звук">
+      <button id="btnAudioToggle" class="w-7 h-7 rounded-lg bg-slate-800 text-amber-400 border border-slate-700 flex items-center justify-center text-xs shrink-0" title="Звук">
         <span id="audioIcon">🔊</span>
       </button>
-      <button id="btnHistoryToggle" class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 flex items-center justify-center text-xs transition" title="История боя">
-        📜
-      </button>
-      <button id="btnRulesOpen" class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 flex items-center justify-center text-xs transition" title="Правила">
+      <button id="btnRulesOpen" class="w-7 h-7 rounded-lg bg-slate-800 text-amber-300 border border-slate-700 flex items-center justify-center text-xs shrink-0" title="Правила">
         ❓
       </button>
-      <button id="btnRestartMatch" class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-red-950/60 hover:bg-red-900 text-red-300 border border-red-800/40 flex items-center justify-center text-xs transition" title="Заново">
+      <button id="btnHistoryToggle" class="hidden sm:flex w-7 h-7 rounded-lg bg-slate-800 text-slate-300 border border-slate-700 items-center justify-center text-xs shrink-0" title="Лог боя">
+        📜
+      </button>
+      <button id="btnRestartMatch" class="hidden sm:flex w-7 h-7 rounded-lg bg-red-950/60 text-red-300 border border-red-800/40 items-center justify-center text-xs shrink-0" title="Заново">
         🔄
+      </button>
+      <!-- Close / Minimize Telegram App Button -->
+      <button id="btnCloseMiniApp" class="px-2 py-1 rounded-lg bg-slate-800 hover:bg-rose-900/80 text-slate-300 hover:text-white border border-slate-700 text-[11px] font-bold flex items-center gap-0.5 shrink-0" title="Свернуть / Закрыть игру">
+        <span>✕</span>
       </button>
     </div>
   </header>
 
-  <!-- MAIN VIEWPORT (Flex-1, Zero Scroll, Perfect Fit on Mobile & Desktop) -->
-  <main class="flex-1 flex flex-col justify-between p-1.5 sm:p-3 overflow-hidden relative max-w-6xl mx-auto w-full">
+  <!-- ===================================================================== -->
+  <!-- MAIN BATTLEFIELD VIEWPORT (100% Fits Phone Width, Zero Overflow)      -->
+  <!-- ===================================================================== -->
+  <main class="flex-1 flex flex-col justify-between p-1.5 sm:p-2.5 w-full max-w-5xl mx-auto overflow-hidden">
     
-    <!-- 1. TOP STATS BAR: RESOURCES & INCOME FOR BOTH PLAYERS -->
-    <div class="grid grid-cols-2 gap-2 sm:gap-4 shrink-0 z-20">
+    <!-- 1. CLEAR "YOU VS OPPONENT" BANNER & RESOURCES -->
+    <div class="grid grid-cols-2 gap-1.5 sm:gap-3 w-full shrink-0 z-20">
       
-      <!-- Player 1 Mini Resources (Left) -->
-      <div class="bg-slate-900/90 backdrop-blur rounded-xl border border-emerald-500/40 px-2 py-1 shadow-md">
-        <div class="flex items-center justify-between text-[10px] sm:text-xs font-bold text-emerald-400 mb-0.5">
-          <span id="p1DisplayTitle" class="truncate max-w-[110px]">Ваше Королевство</span>
-          <span class="text-slate-400 text-[9px] font-mono">Карты: <span id="p1HandCountText" class="text-amber-300">5</span></span>
+      <!-- LEFT: YOU (PLAYER 1) -->
+      <div class="bg-slate-900/95 rounded-xl border-2 border-emerald-500/70 p-1.5 shadow min-w-0">
+        <!-- Player Name Row -->
+        <div class="flex items-center justify-between gap-1 mb-1 border-b border-slate-800 pb-0.5">
+          <div class="flex items-center gap-1 min-w-0">
+            <span class="text-xs shrink-0" id="p1BannerAvatar">👑</span>
+            <span id="p1DisplayTitle" class="text-[11px] sm:text-xs font-black text-emerald-300 truncate">Вы</span>
+          </div>
+          <span class="text-[9px] font-bold px-1 py-0.2 rounded bg-slate-800 text-slate-300 shrink-0" title="Пропущено ходов по таймеру (5 = поражение)">
+            ⏳ <b id="p1MissedCount" class="text-amber-300">0</b>/5
+          </span>
+          <span id="p1HandCountText" class="hidden">5</span>
         </div>
+
+        <!-- 3 Compact Resource Boxes -->
         <div class="grid grid-cols-3 gap-1 text-center font-mono">
-          <div class="bg-amber-950/50 rounded px-1 py-0.5 border border-amber-600/30">
-            <span class="text-[9px] text-amber-400 block font-sans">🧱 Кирпич</span>
-            <span id="p1BricksVal" class="text-xs sm:text-sm font-bold text-amber-200">10</span>
-            <span id="p1BricksIncome" class="text-[8px] text-amber-400/80">(+2)</span>
+          <div class="bg-amber-950/80 rounded-lg py-0.5 px-1 border border-amber-500/40 min-w-0">
+            <div class="text-[9px] text-amber-300 font-sans font-bold truncate">🧱Камень</div>
+            <div class="text-xs sm:text-sm font-black text-white leading-tight">
+              <span id="p1BricksVal">10</span><span id="p1BricksIncome" class="text-[9px] text-emerald-400 ml-0.5">+2</span>
+            </div>
           </div>
-          <div class="bg-rose-950/50 rounded px-1 py-0.5 border border-rose-600/30">
-            <span class="text-[9px] text-rose-400 block font-sans">⚔️ Оружие</span>
-            <span id="p1WeaponsVal" class="text-xs sm:text-sm font-bold text-rose-200">10</span>
-            <span id="p1WeaponsIncome" class="text-[8px] text-rose-400/80">(+2)</span>
+          <div class="bg-rose-950/80 rounded-lg py-0.5 px-1 border border-rose-500/40 min-w-0">
+            <div class="text-[9px] text-rose-300 font-sans font-bold truncate">⚔️Оружие</div>
+            <div class="text-xs sm:text-sm font-black text-white leading-tight">
+              <span id="p1WeaponsVal">10</span><span id="p1WeaponsIncome" class="text-[9px] text-emerald-400 ml-0.5">+2</span>
+            </div>
           </div>
-          <div class="bg-purple-950/50 rounded px-1 py-0.5 border border-purple-600/30">
-            <span class="text-[9px] text-purple-400 block font-sans">✨ Магия</span>
-            <span id="p1MagicVal" class="text-xs sm:text-sm font-bold text-purple-200">10</span>
-            <span id="p1MagicIncome" class="text-[8px] text-purple-400/80">(+2)</span>
+          <div class="bg-purple-950/80 rounded-lg py-0.5 px-1 border border-purple-500/40 min-w-0">
+            <div class="text-[9px] text-purple-300 font-sans font-bold truncate">✨Магия</div>
+            <div class="text-xs sm:text-sm font-black text-white leading-tight">
+              <span id="p1MagicVal">10</span><span id="p1MagicIncome" class="text-[9px] text-emerald-400 ml-0.5">+2</span>
+            </div>
           </div>
         </div>
       </div>
 
-      <!-- Player 2 / Opponent Mini Resources (Right) -->
-      <div class="bg-slate-900/90 backdrop-blur rounded-xl border border-rose-500/40 px-2 py-1 shadow-md">
-        <div class="flex items-center justify-between text-[10px] sm:text-xs font-bold text-rose-400 mb-0.5">
-          <span id="p2DisplayTitle" class="truncate max-w-[110px]">Вражеская Твердыня</span>
-          <span class="text-slate-400 text-[9px] font-mono">Карты: <span id="p2HandCountText" class="text-rose-300">5</span></span>
+      <!-- RIGHT: OPPONENT (PLAYER 2 — NAME CLEARLY VISIBLE!) -->
+      <div class="bg-slate-900/95 rounded-xl border-2 border-rose-500/70 p-1.5 shadow min-w-0">
+        <!-- Opponent Name & Rating Row -->
+        <div class="flex items-center justify-between gap-1 mb-1 border-b border-slate-800 pb-0.5">
+          <div class="flex items-center gap-1 min-w-0">
+            <span class="text-[10px] bg-rose-600 text-white font-black px-1 rounded shrink-0">ВРАГ</span>
+            <span id="p2DisplayTitle" class="text-[11px] sm:text-xs font-black text-rose-300 truncate">Александр_Князь</span>
+          </div>
+          <span id="p2RatingBadge" class="text-[9px] font-mono font-bold text-amber-300 shrink-0">🏆1015</span>
+          <span id="p2HandCountText" class="hidden">5</span>
         </div>
+
+        <!-- 3 Compact Resource Boxes -->
         <div class="grid grid-cols-3 gap-1 text-center font-mono">
-          <div class="bg-amber-950/50 rounded px-1 py-0.5 border border-amber-600/30">
-            <span class="text-[9px] text-amber-400 block font-sans">🧱 Кирпич</span>
-            <span id="p2BricksVal" class="text-xs sm:text-sm font-bold text-amber-200">10</span>
-            <span id="p2BricksIncome" class="text-[8px] text-amber-400/80">(+2)</span>
+          <div class="bg-amber-950/80 rounded-lg py-0.5 px-1 border border-amber-500/40 min-w-0">
+            <div class="text-[9px] text-amber-300 font-sans font-bold truncate">🧱Камень</div>
+            <div class="text-xs sm:text-sm font-black text-white leading-tight">
+              <span id="p2BricksVal">10</span><span id="p2BricksIncome" class="text-[9px] text-amber-400 ml-0.5">+2</span>
+            </div>
           </div>
-          <div class="bg-rose-950/50 rounded px-1 py-0.5 border border-rose-600/30">
-            <span class="text-[9px] text-rose-400 block font-sans">⚔️ Оружие</span>
-            <span id="p2WeaponsVal" class="text-xs sm:text-sm font-bold text-rose-200">10</span>
-            <span id="p2WeaponsIncome" class="text-[8px] text-rose-400/80">(+2)</span>
+          <div class="bg-rose-950/80 rounded-lg py-0.5 px-1 border border-rose-500/40 min-w-0">
+            <div class="text-[9px] text-rose-300 font-sans font-bold truncate">⚔️Оружие</div>
+            <div class="text-xs sm:text-sm font-black text-white leading-tight">
+              <span id="p2WeaponsVal">10</span><span id="p2WeaponsIncome" class="text-[9px] text-rose-400 ml-0.5">+2</span>
+            </div>
           </div>
-          <div class="bg-purple-950/50 rounded px-1 py-0.5 border border-purple-600/30">
-            <span class="text-[9px] text-purple-400 block font-sans">✨ Магия</span>
-            <span id="p2MagicVal" class="text-xs sm:text-sm font-bold text-purple-200">10</span>
-            <span id="p2MagicIncome" class="text-[8px] text-purple-400/80">(+2)</span>
+          <div class="bg-purple-950/80 rounded-lg py-0.5 px-1 border border-purple-500/40 min-w-0">
+            <div class="text-[9px] text-purple-300 font-sans font-bold truncate">✨Магия</div>
+            <div class="text-xs sm:text-sm font-black text-white leading-tight">
+              <span id="p2MagicVal">10</span><span id="p2MagicIncome" class="text-[9px] text-purple-400 ml-0.5">+2</span>
+            </div>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- 2. CENTER BATTLEFIELD: DRAWN CASTLES, WALLS & COMBAT CLASH (Flexible height) -->
-    <div class="flex-1 min-h-[140px] sm:min-h-[190px] relative flex items-end justify-between px-2 sm:px-6 my-1 sm:my-2 overflow-hidden rounded-2xl bg-gradient-to-b from-indigo-950/30 via-slate-900/60 to-slate-950/90 border border-slate-800 shadow-inner">
+    <!-- 2. CENTER ARENA: CASTLES, WALLS & LAST ACTION -->
+    <div class="flex-1 min-h-[115px] relative flex items-end justify-between px-2 sm:px-6 my-1.5 overflow-hidden rounded-2xl bg-gradient-to-b from-indigo-950/40 via-slate-900/75 to-slate-950 border border-slate-700/80 shadow-inner w-full">
       
-      <!-- Stone Ground Foundation Layer -->
-      <div class="absolute bottom-0 left-0 right-0 h-4 bg-gradient-to-r from-emerald-950 via-slate-900 to-rose-950 border-t border-amber-600/40 z-0"></div>
-
-      <!-- LEFT SIDE: PLAYER 1 DRAWN CASTLE & WALL -->
-      <div class="flex items-end gap-1.5 sm:gap-3 z-10 pb-3 relative">
-        
-        <!-- P1 DRAWN CASTLE TOWER -->
-        <div id="p1CastleWrapper" class="flex flex-col items-center cursor-pointer transition transform hover:scale-105" title="Замок Игрока 1">
-          <!-- Floating text anchor -->
-          <div id="p1CastleFloat" class="absolute -top-7 left-1/2 -translate-x-1/2 whitespace-nowrap z-30"></div>
-          
-          <!-- Tower HP Badge -->
-          <div class="bg-slate-900/90 border border-amber-500/70 text-amber-300 font-extrabold text-[10px] sm:text-xs px-1.5 py-0.2 rounded-full mb-1 shadow flex items-center gap-1 font-mono">
-            🏰 <span id="p1CastleNum">30</span>/100
-          </div>
-
-          <!-- Animated Drawn SVG Tower -->
-          <div id="p1CastleBox" class="relative flex items-end justify-center w-14 sm:w-20 transition-all duration-300">
-            <!-- Roof / Flag (Fixed at top of tower) -->
-            <div class="absolute -top-6 sm:-top-7 w-full flex flex-col items-center pointer-events-none">
-              <!-- Flag -->
-              <div class="w-4 h-2.5 bg-emerald-500 border border-emerald-300 -translate-x-1 animate-pulse"></div>
-              <!-- Spire Roof -->
-              <div class="w-0 h-0 border-l-[14px] sm:border-l-[18px] border-l-transparent border-r-[14px] sm:border-r-[18px] border-r-transparent border-b-[18px] sm:border-b-[22px] border-b-amber-600"></div>
-            </div>
-
-            <!-- Tower Trunk (Scales dynamically with HP) -->
-            <div id="p1CastleBody" class="w-12 sm:w-16 bg-gradient-to-b from-amber-700 via-amber-800 to-amber-950 border-2 border-amber-500/80 rounded-t-sm shadow-[0_0_15px_rgba(245,158,11,0.25)] flex flex-col items-center justify-between py-1 structure-svg overflow-hidden" style="height: 65px;">
-              <!-- Battlements Crenels -->
-              <div class="w-full flex justify-between px-0.5 border-b border-amber-600/40 pb-0.5">
-                <span class="w-2 h-1.5 bg-amber-900 border border-amber-600"></span>
-                <span class="w-2 h-1.5 bg-amber-900 border border-amber-600"></span>
-                <span class="w-2 h-1.5 bg-amber-900 border border-amber-600"></span>
-              </div>
-              <!-- Arched Tower Windows -->
-              <div class="w-2.5 h-4 bg-slate-950 border border-amber-400 rounded-t-full shadow-inner my-auto"></div>
-              <!-- Iron Gate -->
-              <div class="w-4 h-5 bg-stone-900 border border-amber-500 rounded-t-sm flex items-end justify-center pb-0.5">
-                <div class="w-2.5 h-3 border-t border-l border-r border-amber-400"></div>
-              </div>
-            </div>
-          </div>
-          <span class="text-[9px] font-bold text-amber-400 tracking-wider font-cinzel mt-0.5">ЗАМОК</span>
-        </div>
-
-        <!-- P1 DRAWN STONE WALL -->
-        <div id="p1WallWrapper" class="flex flex-col items-center cursor-pointer transition transform hover:scale-105" title="Стена Игрока 1">
-          <!-- Floating text anchor -->
-          <div id="p1WallFloat" class="absolute -top-7 left-1/2 -translate-x-1/2 whitespace-nowrap z-30"></div>
-
-          <!-- Wall HP Badge -->
-          <div class="bg-slate-900/90 border border-cyan-500/70 text-cyan-300 font-extrabold text-[10px] sm:text-xs px-1.5 py-0.2 rounded-full mb-1 shadow flex items-center gap-1 font-mono">
-            🛡️ <span id="p1WallNum">15</span>/100
-          </div>
-
-          <!-- Animated Drawn Wall -->
-          <div id="p1WallBox" class="relative flex items-end justify-center w-11 sm:w-16 transition-all duration-300">
-            <!-- Wall Body (Scales with Wall HP) -->
-            <div id="p1WallBody" class="w-10 sm:w-14 bg-gradient-to-b from-cyan-700 via-teal-800 to-slate-900 border-2 border-cyan-400/80 rounded-t-md shadow-[0_0_12px_rgba(6,182,212,0.25)] flex flex-col justify-between structure-svg p-0.5 overflow-hidden" style="height: 42px;">
-              <!-- Wall Crenels -->
-              <div class="flex justify-between border-b border-cyan-500/40 pb-0.5">
-                <div class="w-1.5 h-1 bg-cyan-900 border border-cyan-400"></div>
-                <div class="w-1.5 h-1 bg-cyan-900 border border-cyan-400"></div>
-                <div class="w-1.5 h-1 bg-cyan-900 border border-cyan-400"></div>
-              </div>
-              <!-- Brick lines pattern -->
-              <div class="grid grid-cols-2 gap-0.5 my-auto px-0.5 opacity-60">
-                <div class="h-1 bg-cyan-950 border border-cyan-600/40 rounded-sm"></div>
-                <div class="h-1 bg-cyan-950 border border-cyan-600/40 rounded-sm"></div>
-              </div>
-            </div>
-          </div>
-          <span class="text-[9px] font-bold text-cyan-400 tracking-wider font-cinzel mt-0.5">СТЕНА</span>
-        </div>
-
+      <!-- Top Turn Timer Progress Bar -->
+      <div class="absolute top-0 left-0 right-0 h-1.5 bg-slate-800 z-30 overflow-hidden">
+        <div id="turnTimerBar" class="h-full bg-emerald-400 transition-all duration-300" style="width: 100%;"></div>
       </div>
 
-      <!-- CENTER CLASH ACTION BADGE -->
-      <div id="playedStageBox" class="flex flex-col items-center my-auto px-1 z-20 max-w-[150px] sm:max-w-xs text-center">
-        <div id="playedCardIcon" class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-slate-900/90 border-2 border-amber-500/70 shadow-lg flex items-center justify-center text-xl sm:text-2xl transform transition-transform hover:rotate-6">
+      <!-- Top VS Opponent Name Banner inside Arena -->
+      <div class="absolute top-2.5 left-2 right-2 flex items-center justify-between px-2.5 py-1 rounded-xl bg-slate-900/90 border border-slate-700/80 z-20 text-[10px] sm:text-xs shadow">
+        <span class="font-extrabold text-emerald-300 truncate max-w-[40%]" id="arenaP1Name">👑 Вы</span>
+        <span class="font-black text-amber-400 px-1.5 shrink-0">⚔️ VS ⚔️</span>
+        <span class="font-extrabold text-rose-300 truncate max-w-[40%] text-right" id="arenaP2Name">⚔️ Соперник</span>
+      </div>
+
+      <!-- Stone Ground Foundation Layer -->
+      <div class="absolute bottom-0 left-0 right-0 h-3 bg-gradient-to-r from-emerald-950 via-slate-900 to-rose-950 border-t border-amber-600/40 z-0"></div>
+
+      <!-- LEFT SIDE: PLAYER 1 CASTLE & WALL -->
+      <div class="flex items-end gap-1.5 sm:gap-3 z-10 pb-2.5 relative shrink-0">
+        
+        <!-- P1 CASTLE -->
+        <div id="p1CastleWrapper" class="flex flex-col items-center">
+          <div id="p1CastleFloat" class="absolute -top-6 left-1/2 -translate-x-1/2 whitespace-nowrap z-30"></div>
+          <div class="bg-slate-900 border-2 border-emerald-400 text-emerald-300 font-black text-[11px] sm:text-xs px-1.5 py-0.5 rounded-lg mb-1 shadow flex items-center gap-0.5 font-mono">
+            🏰<span id="p1CastleNum">30</span><span class="text-[9px] text-slate-400">/100</span>
+          </div>
+          <div id="p1CastleBox" class="relative flex items-end justify-center w-11 sm:w-16">
+            <div class="absolute -top-5 w-full flex flex-col items-center pointer-events-none">
+              <div class="w-3 h-2 bg-emerald-500 border border-emerald-200 -translate-x-1"></div>
+              <div class="w-0 h-0 border-l-[11px] sm:border-l-[15px] border-l-transparent border-r-[11px] sm:border-r-[15px] border-r-transparent border-b-[14px] sm:border-b-[18px] border-b-emerald-600"></div>
+            </div>
+            <div id="p1CastleBody" class="w-10 sm:w-14 bg-gradient-to-b from-amber-600 via-amber-800 to-amber-950 border-2 border-emerald-400 rounded-t-sm flex flex-col items-center justify-between py-1 structure-svg overflow-hidden" style="height: 52px;">
+              <div class="w-2 h-3 bg-slate-950 border border-amber-400 rounded-t-full my-auto"></div>
+            </div>
+          </div>
+          <span class="text-[9px] font-extrabold text-emerald-400 mt-0.5">ЗАМОК</span>
+        </div>
+
+        <!-- P1 WALL -->
+        <div id="p1WallWrapper" class="flex flex-col items-center">
+          <div id="p1WallFloat" class="absolute -top-6 left-1/2 -translate-x-1/2 whitespace-nowrap z-30"></div>
+          <div class="bg-slate-900 border-2 border-cyan-400 text-cyan-300 font-black text-[11px] sm:text-xs px-1.5 py-0.5 rounded-lg mb-1 shadow flex items-center gap-0.5 font-mono">
+            🛡️<span id="p1WallNum">15</span>
+          </div>
+          <div id="p1WallBox" class="relative flex items-end justify-center w-9 sm:w-12">
+            <div id="p1WallBody" class="w-8 sm:w-11 bg-gradient-to-b from-cyan-600 via-teal-800 to-slate-900 border-2 border-cyan-300 rounded-t-md structure-svg overflow-hidden" style="height: 34px;"></div>
+          </div>
+          <span class="text-[9px] font-extrabold text-cyan-300 mt-0.5">СТЕНА</span>
+        </div>
+      </div>
+
+      <!-- CENTER ACTION STAGE -->
+      <div id="playedStageBox" class="flex flex-col items-center my-auto px-2 py-1.5 z-20 max-w-[135px] sm:max-w-[220px] text-center bg-slate-900/90 border border-slate-700 rounded-xl shadow-lg min-w-0">
+        <div id="playedCardIcon" class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-slate-800 border border-amber-400/80 flex items-center justify-center text-base sm:text-xl">
           ⚔️
         </div>
-        <div id="playedAuthorLabel" class="text-[9px] uppercase font-bold text-slate-400 mt-1 truncate">Бой начат</div>
-        <div id="playedCardName" class="text-[11px] sm:text-xs font-bold text-amber-300 leading-tight truncate">Выберите карту</div>
+        <div id="playedAuthorLabel" class="text-[9px] uppercase font-extrabold text-amber-400 mt-0.5 truncate w-full">Бой начат</div>
+        <div id="playedCardName" class="text-[11px] sm:text-xs font-black text-white leading-tight truncate w-full">Ваш ход!</div>
+        <div id="playedCardDesc" class="text-[9px] sm:text-[10px] text-emerald-300 font-semibold leading-tight mt-0.5 line-clamp-2">Нажмите на карту</div>
       </div>
 
-      <!-- RIGHT SIDE: PLAYER 2 / OPPONENT DRAWN CASTLE & WALL -->
-      <div class="flex items-end gap-1.5 sm:gap-3 z-10 pb-3 relative">
+      <!-- RIGHT SIDE: PLAYER 2 CASTLE & WALL -->
+      <div class="flex items-end gap-1.5 sm:gap-3 z-10 pb-2.5 relative shrink-0">
         
-        <!-- P2 DRAWN STONE WALL -->
-        <div id="p2WallWrapper" class="flex flex-col items-center cursor-pointer transition transform hover:scale-105" title="Стена Соперника">
-          <!-- Floating text anchor -->
-          <div id="p2WallFloat" class="absolute -top-7 left-1/2 -translate-x-1/2 whitespace-nowrap z-30"></div>
-
-          <!-- Wall HP Badge -->
-          <div class="bg-slate-900/90 border border-cyan-500/70 text-cyan-300 font-extrabold text-[10px] sm:text-xs px-1.5 py-0.2 rounded-full mb-1 shadow flex items-center gap-1 font-mono">
-            🛡️ <span id="p2WallNum">15</span>/100
+        <!-- P2 WALL -->
+        <div id="p2WallWrapper" class="flex flex-col items-center">
+          <div id="p2WallFloat" class="absolute -top-6 left-1/2 -translate-x-1/2 whitespace-nowrap z-30"></div>
+          <div class="bg-slate-900 border-2 border-cyan-400 text-cyan-300 font-black text-[11px] sm:text-xs px-1.5 py-0.5 rounded-lg mb-1 shadow flex items-center gap-0.5 font-mono">
+            🛡️<span id="p2WallNum">15</span>
           </div>
-
-          <!-- Animated Drawn Wall -->
-          <div id="p2WallBox" class="relative flex items-end justify-center w-11 sm:w-16 transition-all duration-300">
-            <div id="p2WallBody" class="w-10 sm:w-14 bg-gradient-to-b from-cyan-700 via-teal-800 to-slate-900 border-2 border-cyan-400/80 rounded-t-md shadow-[0_0_12px_rgba(6,182,212,0.25)] flex flex-col justify-between structure-svg p-0.5 overflow-hidden" style="height: 42px;">
-              <div class="flex justify-between border-b border-cyan-500/40 pb-0.5">
-                <div class="w-1.5 h-1 bg-cyan-900 border border-cyan-400"></div>
-                <div class="w-1.5 h-1 bg-cyan-900 border border-cyan-400"></div>
-                <div class="w-1.5 h-1 bg-cyan-900 border border-cyan-400"></div>
-              </div>
-              <div class="grid grid-cols-2 gap-0.5 my-auto px-0.5 opacity-60">
-                <div class="h-1 bg-cyan-950 border border-cyan-600/40 rounded-sm"></div>
-                <div class="h-1 bg-cyan-950 border border-cyan-600/40 rounded-sm"></div>
-              </div>
-            </div>
+          <div id="p2WallBox" class="relative flex items-end justify-center w-9 sm:w-12">
+            <div id="p2WallBody" class="w-8 sm:w-11 bg-gradient-to-b from-cyan-600 via-teal-800 to-slate-900 border-2 border-cyan-300 rounded-t-md structure-svg overflow-hidden" style="height: 34px;"></div>
           </div>
-          <span class="text-[9px] font-bold text-cyan-400 tracking-wider font-cinzel mt-0.5">СТЕНА</span>
+          <span class="text-[9px] font-extrabold text-cyan-300 mt-0.5">СТЕНА</span>
         </div>
 
-        <!-- P2 DRAWN CASTLE TOWER -->
-        <div id="p2CastleWrapper" class="flex flex-col items-center cursor-pointer transition transform hover:scale-105" title="Замок Соперника">
-          <!-- Floating text anchor -->
-          <div id="p2CastleFloat" class="absolute -top-7 left-1/2 -translate-x-1/2 whitespace-nowrap z-30"></div>
-
-          <!-- Tower HP Badge -->
-          <div class="bg-slate-900/90 border border-rose-500/70 text-rose-300 font-extrabold text-[10px] sm:text-xs px-1.5 py-0.2 rounded-full mb-1 shadow flex items-center gap-1 font-mono">
-            🏰 <span id="p2CastleNum">30</span>/100
+        <!-- P2 CASTLE -->
+        <div id="p2CastleWrapper" class="flex flex-col items-center">
+          <div id="p2CastleFloat" class="absolute -top-6 left-1/2 -translate-x-1/2 whitespace-nowrap z-30"></div>
+          <div class="bg-slate-900 border-2 border-rose-500 text-rose-300 font-black text-[11px] sm:text-xs px-1.5 py-0.5 rounded-lg mb-1 shadow flex items-center gap-0.5 font-mono">
+            🏰<span id="p2CastleNum">30</span><span class="text-[9px] text-slate-400">/100</span>
           </div>
-
-          <!-- Animated Drawn SVG Tower -->
-          <div id="p2CastleBox" class="relative flex items-end justify-center w-14 sm:w-20 transition-all duration-300">
-            <!-- Roof / Flag -->
-            <div class="absolute -top-6 sm:-top-7 w-full flex flex-col items-center pointer-events-none">
-              <!-- Flag -->
-              <div class="w-4 h-2.5 bg-rose-500 border border-rose-300 translate-x-1 animate-pulse"></div>
-              <!-- Spire Roof -->
-              <div class="w-0 h-0 border-l-[14px] sm:border-l-[18px] border-l-transparent border-r-[14px] sm:border-r-[18px] border-r-transparent border-b-[18px] sm:border-b-[22px] border-b-rose-700"></div>
+          <div id="p2CastleBox" class="relative flex items-end justify-center w-11 sm:w-16">
+            <div class="absolute -top-5 w-full flex flex-col items-center pointer-events-none">
+              <div class="w-3 h-2 bg-rose-500 border border-rose-200 translate-x-1"></div>
+              <div class="w-0 h-0 border-l-[11px] sm:border-l-[15px] border-l-transparent border-r-[11px] sm:border-r-[15px] border-r-transparent border-b-[14px] sm:border-b-[18px] border-b-rose-700"></div>
             </div>
-
-            <!-- Tower Trunk (Scales dynamically with HP) -->
-            <div id="p2CastleBody" class="w-12 sm:w-16 bg-gradient-to-b from-rose-800 via-rose-900 to-slate-950 border-2 border-rose-500/80 rounded-t-sm shadow-[0_0_15px_rgba(244,63,94,0.25)] flex flex-col items-center justify-between py-1 structure-svg overflow-hidden" style="height: 65px;">
-              <div class="w-full flex justify-between px-0.5 border-b border-rose-600/40 pb-0.5">
-                <span class="w-2 h-1.5 bg-rose-950 border border-rose-500"></span>
-                <span class="w-2 h-1.5 bg-rose-950 border border-rose-500"></span>
-                <span class="w-2 h-1.5 bg-rose-950 border border-rose-500"></span>
-              </div>
-              <div class="w-2.5 h-4 bg-slate-950 border border-rose-400 rounded-t-full shadow-inner my-auto"></div>
-              <div class="w-4 h-5 bg-stone-900 border border-rose-500 rounded-t-sm flex items-end justify-center pb-0.5">
-                <div class="w-2.5 h-3 border-t border-l border-r border-rose-400"></div>
-              </div>
+            <div id="p2CastleBody" class="w-10 sm:w-14 bg-gradient-to-b from-rose-700 via-rose-900 to-slate-950 border-2 border-rose-500 rounded-t-sm flex flex-col items-center justify-between py-1 structure-svg overflow-hidden" style="height: 52px;">
+              <div class="w-2 h-3 bg-slate-950 border border-rose-400 rounded-t-full my-auto"></div>
             </div>
           </div>
-          <span class="text-[9px] font-bold text-rose-400 tracking-wider font-cinzel mt-0.5">ЗАМОК</span>
+          <span class="text-[9px] font-extrabold text-rose-400 mt-0.5">ВРАГ</span>
         </div>
-
       </div>
     </div>
 
-    <!-- 3. BOTTOM HAND CONTROLS & 5 CARDS (Compact, Zero Scroll, Fits standard screens) -->
-    <div class="shrink-0 flex flex-col gap-1 z-20 pb-1">
+    <!-- 3. COMPACT, PUNCHY 5 CARDS (No long text walls, just Icon + Short Name + Big Effect Number!) -->
+    <div class="shrink-0 flex flex-col gap-1 z-20 w-full">
       
-      <!-- Hand Info Bar: Direct Card Click = Play | Button [- Сброс] in bottom-left corner = Discard -->
-      <div class="flex items-center justify-between px-2 py-0.5 rounded-xl bg-slate-900/90 border border-slate-700 shadow-sm text-xs">
-        <div class="flex items-center gap-1 text-[9px] sm:text-[10px] text-slate-300">
-          <span class="text-amber-400 font-bold">💡 Нажатие:</span>
-          <span>сыграть карту | кнопка <b class="bg-red-600 text-white px-1.5 py-0.2 rounded border border-red-300 font-mono text-[9px] sm:text-xs font-black">− Сброс</b> в углу карты: сбросить</span>
+      <!-- 1-Line Tactical Hint Bar + Discard Mode Toggle Button above cards -->
+      <div class="flex items-center justify-between gap-1.5 px-2 py-1 rounded-xl bg-slate-900/95 border border-amber-500/40 text-[11px] sm:text-xs w-full">
+        <div id="selectedCardHint" class="truncate text-slate-200 flex-1 min-w-0">
+          <span class="text-amber-300 font-bold">💡 Нажатие по карте:</span> ход | Кнопка <b class="text-rose-400">«− Сброс»</b> внизу карты: заменить
         </div>
-
-        <div class="flex items-center gap-1.5 font-mono text-[9px] text-slate-400 shrink-0">
+        <button id="btnToggleDiscardMode" class="px-2.5 py-0.5 rounded-lg bg-red-600 hover:bg-red-500 text-white font-black text-[10px] sm:text-xs shrink-0 shadow border border-red-400 transition flex items-center gap-1" title="Включить режим сброса карты">
+          <span>🗑️</span><span id="discardModeBtnText">Сбросить карту</span>
+        </button>
+        <div class="hidden sm:flex items-center gap-1.5 font-mono text-[10px] text-slate-400 shrink-0 ml-1">
           <span>Колода: <b id="deckCountBadge" class="text-amber-300">42</b></span>
-          <span class="text-slate-600">|</span>
+          <span>|</span>
           <span>Сброс: <b id="discardCountBadge" class="text-slate-300">0</b></span>
         </div>
       </div>
 
-      <!-- 5 Hand Cards Row -->
-      <div id="cardsHandContainer" class="flex items-center justify-between sm:justify-center gap-1 sm:gap-2 px-0.5 h-[115px] sm:h-[135px]">
-        <!-- 5 Cards dynamically injected here -->
+      <!-- 5 Compact, Proportional Cards Row (Height 138px on mobile, 160px on desktop) -->
+      <div id="cardsHandContainer" class="grid grid-cols-5 gap-1 sm:gap-2 w-full h-[148px] sm:h-[168px]">
+        <!-- 5 Cards dynamically rendered here -->
       </div>
     </div>
 
   </main>
 
-  
-  <!-- MODAL: $TOWER TOKEN AIRDROP & MINING -->
-  <div id="tokenModal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-3 hidden">
-    <div class="bg-gradient-to-b from-slate-900 via-indigo-950/90 to-slate-950 border-2 border-amber-400/70 rounded-2xl max-w-sm w-full p-4 sm:p-5 shadow-2xl relative text-slate-200">
-      <button id="btnTokenClose" class="absolute top-3 right-3 text-slate-400 hover:text-white font-bold text-lg">✕</button>
-
-      <!-- Token Emblem Header -->
+  <!-- ===================================================================== -->
+  <!-- MAIN MENU & REWARDS HUB OVERLAY                                       -->
+  <!-- ===================================================================== -->
+  <div id="mainMenuModal" class="fixed inset-0 bg-slate-950/95 backdrop-blur-md z-50 flex items-center justify-center p-3 overflow-y-auto">
+    <div class="bg-gradient-to-b from-slate-900 via-slate-900 to-slate-950 border-2 border-amber-500/60 rounded-3xl max-w-md w-full p-4 sm:p-5 shadow-2xl text-slate-100 my-auto">
+      
       <div class="text-center mb-3">
-        <div class="w-14 h-14 mx-auto rounded-2xl bg-gradient-to-tr from-amber-600 via-yellow-400 to-amber-200 p-0.5 shadow-[0_0_20px_rgba(250,204,21,0.4)] mb-2 flex items-center justify-center">
-          <div class="w-full h-full bg-slate-950 rounded-2xl flex items-center justify-center text-3xl">
-            🪙
-          </div>
+        <div class="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-amber-500/15 border border-amber-400/40 text-amber-300 text-[11px] font-extrabold mb-1">
+          <span>🏰</span> <span>ОНЛАЙН БИТВА БАШЕН</span>
         </div>
-        <h2 class="font-fantasy text-lg font-bold text-amber-300 tracking-wide">$TOWER TOKEN AIRDROP</h2>
-        <p class="text-[11px] text-slate-400">Фармите токены цитадели за победы и развитие шахт</p>
+        <h1 class="font-fantasy text-xl sm:text-2xl font-black text-amber-300 leading-tight">
+          КАРТОЧНЫЕ БАТАЛИИ
+        </h1>
       </div>
 
-      <!-- Balance Card -->
-      <div class="bg-slate-950/80 border border-amber-500/40 rounded-xl p-3 mb-3 text-center shadow-inner relative overflow-hidden">
-        <div class="absolute -right-6 -bottom-6 text-6xl opacity-10 pointer-events-none">🪙</div>
-        <div class="text-[10px] uppercase tracking-wider text-slate-400 font-bold mb-0.5">Ваш баланс $TOWER</div>
-        <div id="modalTokenBalance" class="text-2xl sm:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-yellow-300 to-amber-400 font-mono">
-          250 $TOWER
+      <!-- Player Mini Dashboard -->
+      <div class="bg-slate-950/90 border border-slate-800 rounded-2xl p-2.5 mb-3 flex items-center justify-between">
+        <div class="flex items-center gap-2 min-w-0">
+          <div id="menuPlayerAvatar" class="w-10 h-10 rounded-xl bg-amber-500/20 border-2 border-amber-400 flex items-center justify-center text-xl shrink-0">
+            👑
+          </div>
+          <div class="min-w-0">
+            <div id="menuPlayerName" class="font-extrabold text-sm text-white truncate">Полководец</div>
+            <div class="text-[11px] text-slate-400 flex items-center gap-1.5">
+              <span>🏆 <b id="menuPlayerRating" class="text-amber-300">1000</b></span>
+              <span>•</span>
+              <span>Побед: <b id="menuPlayerWins" class="text-emerald-400">0</b></span>
+            </div>
+          </div>
         </div>
-        <div class="text-[10px] text-emerald-400 mt-1 flex items-center justify-center gap-1">
-          <span>⚡</span> <span>Статус: Активный фарминг (Сезон 1)</span>
+        <div class="text-right shrink-0 ml-2">
+          <div class="text-[9px] uppercase text-slate-400 font-bold">Баланс</div>
+          <div id="menuTokenBalance" class="text-sm font-black text-amber-300 font-mono">🪙 250</div>
         </div>
       </div>
 
-      <!-- Passive Mining Claim Section -->
-      <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-2.5 mb-3 flex items-center justify-between gap-2">
-        <div class="text-left">
-          <div class="text-[11px] font-bold text-amber-300 flex items-center gap-1">
-            <span>⛏️</span> <span>Доход от построенных шахт</span>
-          </div>
-          <div class="text-[10px] text-slate-400">
-            Накоплено: <b id="passiveMiningReward" class="text-amber-300 font-mono">+60 $TOWER</b>
-          </div>
-        </div>
-        <button id="btnClaimMining" class="px-3 py-1.5 rounded-lg bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-slate-950 font-black text-xs transition shadow shrink-0">
-          Забрать
+      <!-- PRIMARY ACTION: AUTO-MATCHMAKING -->
+      <div class="space-y-2 mb-3">
+        <button id="btnStartAutoMatch" class="w-full py-3 px-4 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 font-black text-sm sm:text-base tracking-wide shadow-lg transition flex items-center justify-center gap-2">
+          <span>⚔️</span>
+          <span>НАЙТИ СОПЕРНИКА (В БОЙ)</span>
+        </button>
+
+        <button id="btnMenuInviteDuel" class="w-full py-2.5 px-3 rounded-2xl bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white font-extrabold text-xs shadow transition flex items-center justify-center gap-1.5">
+          <span>✈️</span>
+          <span>ВЫЗВАТЬ ДРУГА В TELEGRAM (+250 🪙)</span>
         </button>
       </div>
 
-      <!-- Airdrop Quests List -->
-      <div class="space-y-1.5 mb-3 text-xs max-h-44 overflow-y-auto pr-1">
-        <div class="text-[10px] uppercase font-bold text-slate-400 px-1">Задания сезона для наград:</div>
-        
-        <!-- Quest 1 -->
-        <div class="bg-slate-950/60 p-2 rounded-lg border border-slate-800 flex items-center justify-between">
-          <div class="flex items-center gap-2">
-            <span class="text-sm">⚔️</span>
-            <div>
-              <div class="font-bold text-[11px]">Одержать победу</div>
-              <div class="text-[9px] text-amber-400 font-mono">+50 $TOWER за каждый бой</div>
-            </div>
-          </div>
-          <span class="text-[10px] font-bold text-emerald-400 bg-emerald-950/60 px-1.5 py-0.5 rounded border border-emerald-500/40">Авто</span>
+      <!-- REWARDS & PROMOTION SECTION -->
+      <div class="bg-slate-950/85 border border-amber-500/40 rounded-2xl p-3 mb-3 space-y-2">
+        <div class="flex items-center justify-between">
+          <span class="text-[11px] font-extrabold text-amber-300 uppercase flex items-center gap-1">
+            <span>🎁</span> <span>Бонусы и Приглашения</span>
+          </span>
+          <span class="text-[10px] text-slate-400 font-mono">Друзей: <b id="menuInvitedCount" class="text-emerald-400">0</b></span>
         </div>
 
-        <!-- Quest 2 -->
-        <div class="bg-slate-950/60 p-2 rounded-lg border border-slate-800 flex items-center justify-between">
-          <div class="flex items-center gap-2">
-            <span class="text-sm">🏰</span>
-            <div>
-              <div class="font-bold text-[11px]">Достичь 100 HP замка</div>
-              <div class="text-[9px] text-amber-400 font-mono">+200 $TOWER</div>
-            </div>
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-2 flex items-center justify-between gap-2">
+          <div class="text-left min-w-0">
+            <div class="text-xs font-bold text-white truncate">👥 Пригласить друга</div>
+            <div class="text-[10px] text-amber-400 font-semibold">Награда: <b>+250 🪙 $TOWER</b></div>
           </div>
-          <span class="text-[10px] font-bold text-amber-400 bg-amber-950/60 px-1.5 py-0.5 rounded border border-amber-500/40">Бонус</span>
+          <button id="btnMenuShareGameReward" class="px-2.5 py-1.5 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 font-black text-xs shrink-0">
+            ✈️ Позвать
+          </button>
         </div>
 
-        <!-- Quest 3 -->
-        <div class="bg-slate-950/60 p-2 rounded-lg border border-slate-800 flex items-center justify-between">
-          <div class="flex items-center gap-2">
-            <span class="text-sm">✈️</span>
-            <div>
-              <div class="font-bold text-[11px]">Пригласить друга в Telegram</div>
-              <div class="text-[9px] text-amber-400 font-mono">+500 $TOWER</div>
-            </div>
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-2 flex items-center justify-between gap-2">
+          <div class="text-left min-w-0">
+            <div class="text-xs font-bold text-white truncate">📲 Добавить игру себе</div>
+            <div class="text-[10px] text-emerald-400 font-semibold truncate" id="addHomeStatusText">Бонус: <b>+500 🪙 $TOWER</b></div>
           </div>
-          <button id="btnQuestInviteFriend" class="px-2 py-0.5 bg-sky-600 hover:bg-sky-500 text-white rounded text-[10px] font-bold">
-            Позвать
+          <button id="btnAddGameToHome" class="px-2.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs shrink-0">
+            ➕ Добавить
           </button>
         </div>
       </div>
 
-      <!-- Footer Info -->
-      <div class="text-center pt-2 border-t border-slate-800 text-[10px] text-slate-400">
-        🪙 Токены $TOWER накапливаются в вашем профиле и сохраняются на всех устройствах.
+      <!-- Secondary Menu Controls -->
+      <div class="grid grid-cols-3 gap-1.5 text-xs font-bold">
+        <button id="btnMenuPlayBot" class="py-2 px-1 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition flex flex-col items-center gap-0.5">
+          <span>🤖</span>
+          <span class="text-[11px]">С Ботом</span>
+        </button>
+        <button id="btnMenuOpenRules" class="py-2 px-1 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 transition flex flex-col items-center gap-0.5">
+          <span>📜</span>
+          <span class="text-[11px]">Правила</span>
+        </button>
+        <button id="btnMenuOpenProfile" class="py-2 px-1 rounded-xl bg-slate-800 hover:bg-slate-700 text-indigo-300 border border-slate-700 transition flex flex-col items-center gap-0.5">
+          <span>👑</span>
+          <span class="text-[11px]">Профиль</span>
+        </button>
+      </div>
+
+      <!-- Hidden compatibility button for header quick invite -->
+      <button id="btnQuickInviteHeader" class="hidden">✈️ Другу</button>
+
+      <button id="btnResumeMatch" class="w-full mt-2.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 text-xs font-bold transition hidden">
+        ↩ Вернуться в текущий бой
+      </button>
+    </div>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- AUTOMATIC MATCHMAKING OVERLAY                                         -->
+  <!-- ===================================================================== -->
+  <div id="matchmakingModal" class="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-slate-900 border-2 border-emerald-500/60 rounded-3xl max-w-sm w-full p-5 text-center shadow-2xl">
+      <div class="w-16 h-16 mx-auto mb-2.5 rounded-full bg-emerald-500/15 border-2 border-emerald-400 flex items-center justify-center text-3xl animate-pulse">
+        ⚔️
+      </div>
+      <h2 id="matchmakingTitle" class="font-fantasy text-lg font-black text-emerald-300 mb-1">Поиск соперника...</h2>
+      <p id="matchmakingSubtitle" class="text-xs text-slate-300 mb-3">Подбираем игрока по вашему рейтингу</p>
+
+      <div class="bg-slate-950 rounded-2xl p-3 border border-slate-800 mb-4 font-mono text-xs space-y-1">
+        <div class="flex justify-between">
+          <span class="text-slate-400">Ваш рейтинг:</span>
+          <span id="mmPlayerRating" class="text-amber-300 font-bold">1000 🏆</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-slate-400">Время поиска:</span>
+          <span id="mmSearchTimer" class="text-emerald-400 font-bold">00:01</span>
+        </div>
+      </div>
+
+      <div class="space-y-2">
+        <button id="btnMatchmakingInviteFriend" class="w-full py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow">
+          <span>✈️</span> <span>Играть с другом из Telegram</span>
+        </button>
+        <button id="btnCancelMatchmaking" class="w-full py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white font-bold text-xs transition">
+          Отмена
+        </button>
       </div>
     </div>
   </div>
 
-  <!-- MODAL: LOGIN & PLAYER PROFILE -->
+  <!-- ===================================================================== -->
+  <!-- MODAL: $TOWER TOKEN AIRDROP, REFERRALS & ADD TO HOME                  -->
+  <!-- ===================================================================== -->
+  <div id="tokenModal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-3 hidden">
+    <div class="bg-gradient-to-b from-slate-900 via-indigo-950/90 to-slate-950 border-2 border-amber-400/70 rounded-2xl max-w-sm w-full p-4 shadow-2xl relative text-slate-200">
+      <button id="btnTokenClose" class="absolute top-3 right-3 text-slate-400 hover:text-white font-bold text-lg">✕</button>
+
+      <div class="text-center mb-2.5">
+        <div class="text-3xl mb-1">🪙</div>
+        <h2 class="font-fantasy text-base font-bold text-amber-300">БОНУСЫ И $TOWER</h2>
+      </div>
+
+      <div class="bg-slate-950/80 border border-amber-500/40 rounded-xl p-2.5 mb-2.5 text-center">
+        <div class="text-[10px] uppercase text-slate-400 font-bold">Ваш баланс</div>
+        <div id="modalTokenBalance" class="text-xl font-black text-amber-300 font-mono">250 $TOWER</div>
+      </div>
+
+      <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-2.5 mb-2.5 flex items-center justify-between gap-2">
+        <div class="text-left">
+          <div class="text-xs font-bold text-amber-300">⛏️ Доход от шахт</div>
+          <div class="text-[11px] text-slate-400">Накоплено: <b id="passiveMiningReward" class="text-amber-300 font-mono">+60 $TOWER</b></div>
+        </div>
+        <button id="btnClaimMining" class="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs shrink-0">
+          Забрать
+        </button>
+      </div>
+
+      <div class="space-y-2 mb-2.5 text-xs">
+        <div class="bg-slate-950/80 p-2 rounded-xl border border-slate-800 flex items-center justify-between gap-2">
+          <div>
+            <div class="font-bold text-white">✈️ Пригласить друга</div>
+            <div class="text-[10px] text-amber-400 font-mono">+250 $TOWER за друга</div>
+          </div>
+          <button id="btnQuestInviteFriend" class="px-2.5 py-1.5 bg-sky-500 text-slate-950 rounded-lg text-xs font-black shrink-0">
+            Позвать
+          </button>
+        </div>
+
+        <div class="bg-slate-950/80 p-2 rounded-xl border border-slate-800 flex items-center justify-between gap-2">
+          <div>
+            <div class="font-bold text-white">📲 Добавить игру себе</div>
+            <div class="text-[10px] text-emerald-400 font-mono">+500 $TOWER бонус</div>
+          </div>
+          <button id="btnModalAddHome" class="px-2.5 py-1.5 bg-emerald-500 text-slate-950 rounded-lg text-xs font-black shrink-0">
+            Добавить
+          </button>
+        </div>
+      </div>
+
+      <div class="bg-slate-950/90 p-2 rounded-xl border border-slate-800 flex items-center justify-between gap-2">
+        <span class="text-[10px] text-slate-300 truncate font-mono">t.me/TowerBattlesGame_bot/play</span>
+        <button id="btnCopyGameLink" class="px-2 py-1 rounded-lg bg-slate-800 text-amber-300 font-bold text-[10px] shrink-0">
+          Копировать
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- MODAL: LOGIN & PLAYER PROFILE                                         -->
+  <!-- ===================================================================== -->
   <div id="loginModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-3 hidden">
-    <div class="bg-slate-900 border-2 border-amber-500/50 rounded-2xl max-w-sm w-full p-4 sm:p-5 shadow-2xl relative text-slate-200">
+    <div class="bg-slate-900 border-2 border-amber-500/50 rounded-2xl max-w-sm w-full p-4 shadow-2xl relative text-slate-200">
       <button id="btnLoginClose" class="absolute top-3 right-3 text-slate-400 hover:text-white font-bold text-lg">✕</button>
       
       <div class="text-center mb-3">
-        <div class="w-12 h-12 mx-auto rounded-xl bg-amber-500/20 border border-amber-400/50 flex items-center justify-center text-2xl mb-1.5 text-amber-400">
-          👑
-        </div>
-        <h2 class="font-fantasy text-lg font-bold text-amber-300">Профиль Полководца</h2>
-        <p class="text-[11px] text-slate-400">Входите под своим именем с любого устройства</p>
+        <h2 class="font-fantasy text-base font-bold text-amber-300">Профиль Полководца</h2>
       </div>
 
-      <!-- Yandex Quick Auth Button -->
-      <button id="btnYandexAuth" class="w-full py-2.5 mb-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs tracking-wide transition flex items-center justify-center gap-2 shadow">
+      <button id="btnYandexAuth" class="w-full py-2 mb-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs flex items-center justify-center gap-2 shadow">
         <span>Войти через Яндекс ID</span>
-        <i class="fa-solid fa-arrow-right"></i>
       </button>
 
-      <div class="relative my-3 text-center">
-        <hr class="border-slate-700">
-        <span class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-slate-900 px-2 text-[10px] text-slate-500 uppercase font-bold">или гостевой вход</span>
-      </div>
-
-      <!-- Nickname Input -->
       <div class="space-y-3">
         <div>
-          <label class="text-[11px] font-bold text-slate-300 block mb-1">Ваш никнейм:</label>
-          <input id="inputNickname" type="text" maxlength="15" placeholder="Введите имя..." class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500">
+          <label class="text-xs font-bold text-slate-300 block mb-1">Ваш никнейм:</label>
+          <input id="inputNickname" type="text" maxlength="16" placeholder="Введите имя..." class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white">
         </div>
 
         <div>
-          <label class="text-[11px] font-bold text-slate-300 block mb-1">Выберите герб:</label>
+          <label class="text-xs font-bold text-slate-300 block mb-1">Выберите герб:</label>
           <div id="avatarPicker" class="grid grid-cols-6 gap-1.5 text-center">
             <button data-avatar="👑" class="p-1.5 rounded-lg bg-slate-800 border-2 border-amber-400 text-base">👑</button>
-            <button data-avatar="⚔️" class="p-1.5 rounded-lg bg-slate-800 border border-slate-700 hover:border-amber-400 text-base">⚔️</button>
-            <button data-avatar="🛡️" class="p-1.5 rounded-lg bg-slate-800 border border-slate-700 hover:border-amber-400 text-base">🛡️</button>
-            <button data-avatar="🧙‍♂️" class="p-1.5 rounded-lg bg-slate-800 border border-slate-700 hover:border-amber-400 text-base">🧙‍♂️</button>
-            <button data-avatar="🏹" class="p-1.5 rounded-lg bg-slate-800 border border-slate-700 hover:border-amber-400 text-base">🏹</button>
-            <button data-avatar="🐉" class="p-1.5 rounded-lg bg-slate-800 border border-slate-700 hover:border-amber-400 text-base">🐉</button>
+            <button data-avatar="⚔️" class="p-1.5 rounded-lg bg-slate-800 border border-slate-700 text-base">⚔️</button>
+            <button data-avatar="🛡️" class="p-1.5 rounded-lg bg-slate-800 border border-slate-700 text-base">🛡️</button>
+            <button data-avatar="🧙‍♂️" class="p-1.5 rounded-lg bg-slate-800 border border-slate-700 text-base">🧙‍♂️</button>
+            <button data-avatar="🏹" class="p-1.5 rounded-lg bg-slate-800 border border-slate-700 text-base">🏹</button>
+            <button data-avatar="🐉" class="p-1.5 rounded-lg bg-slate-800 border border-slate-700 text-base">🐉</button>
           </div>
         </div>
 
-        <!-- Player Stats Summary -->
-        <div class="bg-slate-950/60 p-2.5 rounded-xl border border-slate-800 text-[11px] space-y-1">
+        <div class="bg-slate-950/60 p-2.5 rounded-xl border border-slate-800 text-xs space-y-1">
           <div class="flex justify-between"><span class="text-slate-400">Победы:</span> <span id="statProfileWins" class="text-emerald-400 font-bold">0</span></div>
           <div class="flex justify-between"><span class="text-slate-400">Поражения:</span> <span id="statProfileLosses" class="text-rose-400 font-bold">0</span></div>
           <div class="flex justify-between"><span class="text-slate-400">Рейтинг:</span> <span id="statProfileRating" class="text-amber-300 font-bold">1000</span></div>
         </div>
 
-        <button id="btnSaveProfile" class="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs tracking-wide transition shadow">
+        <button id="btnSaveProfile" class="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs">
           Сохранить профиль
         </button>
       </div>
     </div>
   </div>
 
-  <!-- MODAL: ONLINE MULTIPLAYER MATCHMAKING -->
+  <!-- ===================================================================== -->
+  <!-- MODAL: ONLINE MULTIPLAYER & TELEGRAM DUEL INVITE                      -->
+  <!-- ===================================================================== -->
   <div id="onlineModal" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-3 hidden">
-    <div class="bg-slate-900 border-2 border-indigo-500/50 rounded-2xl max-w-sm w-full p-4 sm:p-5 shadow-2xl relative text-slate-200 text-center">
+    <div class="bg-slate-900 border-2 border-indigo-500/60 rounded-2xl max-w-sm w-full p-4 shadow-2xl relative text-slate-200 text-center">
       <button id="btnOnlineClose" class="absolute top-3 right-3 text-slate-400 hover:text-white font-bold text-lg">✕</button>
 
-      <div class="w-12 h-12 mx-auto rounded-xl bg-indigo-500/20 border border-indigo-400/50 flex items-center justify-center text-2xl mb-2 text-indigo-400">
-        🌐
-      </div>
-      <h2 class="font-fantasy text-lg font-bold text-indigo-300 mb-0.5">Битва по интернету</h2>
-      <p class="text-[11px] text-slate-400 mb-3">Сразитесь с игроками из любой точки мира</p>
+      <h2 class="font-fantasy text-base font-bold text-indigo-300 mb-2">🌐 Онлайн Дуэль</h2>
 
-      <!-- Connection Status Banner -->
-      <div id="netStatusBox" class="p-2 rounded-xl bg-slate-950/70 border border-slate-800 text-xs mb-3 font-mono">
-        <span class="text-slate-400">Статус сети: </span>
+      <button id="btnModalAutoMatch" class="w-full py-2.5 px-3 mb-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs shadow flex items-center justify-center gap-2">
+        <span>🔍</span> <span>АВТОПОДБОР СОПЕРНИКА</span>
+      </button>
+
+      <div id="netStatusBox" class="p-1.5 rounded-xl bg-slate-950/70 border border-slate-800 text-xs mb-2.5 font-mono">
+        <span class="text-slate-400">Статус: </span>
         <span id="netStatusText" class="text-emerald-400 font-bold">Готов</span>
       </div>
 
-      <!-- Create Room / Room Code -->
-      <div class="space-y-2 mb-3 text-left">
+      <div class="space-y-2 mb-2.5 text-left">
         <div class="bg-slate-800/80 p-2.5 rounded-xl border border-slate-700">
-          <div class="text-[10px] text-slate-400 uppercase font-bold mb-1">Создать дуэль:</div>
-          <div class="flex items-center gap-1.5">
-            <input id="myRoomIdInput" type="text" readonly class="bg-slate-950 border border-slate-700 rounded-lg px-2 py-1.5 text-xs font-mono font-bold text-amber-300 w-full text-center">
-            <button id="btnCopyRoomId" class="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shrink-0">
+          <div class="text-[11px] text-amber-300 font-bold mb-1">Вызвать друга из Telegram (+250 🪙):</div>
+          <div class="flex items-center gap-1.5 mb-2">
+            <input id="myRoomIdInput" type="text" readonly class="bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-xs font-mono font-bold text-amber-300 w-full text-center" value="CB_...">
+            <button id="btnCopyRoomId" class="px-2.5 py-1 rounded-lg bg-indigo-600 text-white font-bold text-xs shrink-0">
               Код
             </button>
           </div>
-          <!-- Telegram Share button -->
-          <button id="btnTelegramShare" class="w-full mt-2 py-1.5 px-3 rounded-lg bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold transition flex items-center justify-center gap-1.5 shadow">
+          <button id="btnTelegramShare" class="w-full py-2 px-3 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 text-xs font-black flex items-center justify-center gap-1.5 shadow">
             <span>✈️</span> <span>Позвать друга из Telegram</span>
           </button>
-          <p class="text-[10px] text-slate-400 mt-1">Отправьте этот код или ссылку другу для подключения</p>
         </div>
 
         <div class="bg-slate-800/80 p-2.5 rounded-xl border border-slate-700">
-          <div class="text-[10px] text-slate-400 uppercase font-bold mb-1">Подключиться к другу:</div>
+          <div class="text-[11px] text-slate-300 font-bold mb-1">Подключиться по коду друга:</div>
           <div class="flex items-center gap-1.5">
-            <input id="inputTargetRoomId" type="text" placeholder="Код комнаты друга..." class="bg-slate-950 border border-slate-700 rounded-lg px-2 py-1.5 text-xs font-mono text-white w-full text-center uppercase">
-            <button id="btnConnectRoom" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shrink-0">
+            <input id="inputTargetRoomId" type="text" placeholder="Код друга..." class="bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-xs font-mono text-white w-full text-center uppercase">
+            <button id="btnConnectRoom" class="px-3 py-1 rounded-lg bg-emerald-600 text-white font-bold text-xs shrink-0">
               Войти
             </button>
           </div>
         </div>
       </div>
 
-      <div class="pt-2 border-t border-slate-800">
-        <button id="btnCancelOnline" class="w-full py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold transition">
-          Играть против ИИ
-        </button>
-      </div>
+      <button id="btnCancelOnline" class="w-full py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold">
+        Играть против ИИ
+      </button>
     </div>
   </div>
 
-  <!-- MODAL: RULES (COMPACT) -->
+  <!-- ===================================================================== -->
+  <!-- MODAL: RULES                                                          -->
+  <!-- ===================================================================== -->
   <div id="rulesModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-3 hidden">
-    <div class="bg-slate-900 border-2 border-amber-500/50 rounded-2xl max-w-md w-full p-4 sm:p-5 shadow-2xl relative text-slate-200 max-h-[85vh] overflow-y-auto">
+    <div class="bg-slate-900 border-2 border-amber-500/50 rounded-2xl max-w-md w-full p-4 shadow-2xl relative text-slate-200 max-h-[85vh] overflow-y-auto">
       <button id="btnRulesClose" class="absolute top-3 right-3 text-slate-400 hover:text-white font-bold text-lg">✕</button>
-      <h2 class="font-fantasy text-base sm:text-lg font-bold text-amber-400 mb-2 flex items-center gap-1.5">
-        <span>📜</span> Правила Битвы
-      </h2>
-      <div class="space-y-2.5 text-xs text-slate-300 leading-relaxed">
-        <p><b class="text-amber-300">🏆 Победа:</b> Возвести свой Замок до <span class="text-amber-400 font-bold">100 HP</span> ИЛИ уничтожить замок врага (<span class="text-rose-400 font-bold">0 HP</span>).</p>
-        <p><b class="text-cyan-300">🛡️ Стена:</b> Поглощает обычный урон. Излишек урона переходит на замок. Некоторые заклинания бьют прямо по замку!</p>
-        <p><b class="text-emerald-300">💎 Ресурсы и Шахты:</b> Кирпичи, Оружие, Магия. Разыгрывайте карты шахт и мастерских, чтобы увеличивать свой доход (+1 или +2 за ход), или карты диверсий, чтобы снижать доходы врага (мин. 1)!</p>
-        <p><b class="text-purple-300">🃏 Сброс карт:</b> Если не хватает ресурсов на карту, нажмите «Сбросить» — карта заменится, и ход перейдет сопернику.</p>
+      <h2 class="font-fantasy text-base font-bold text-amber-400 mb-2">📜 Правила Битвы</h2>
+      <div class="space-y-2 text-xs text-slate-200 leading-relaxed">
+        <p><b class="text-amber-300">🏆 Победа:</b> Постройте свой Замок до <b>100 HP</b> ИЛИ разрушьте Замок врага до <b>0 HP</b>.</p>
+        <p><b class="text-cyan-300">🛡️ Стена:</b> Защищает замок. Обычный урон сначала ломает стену, а остаток переходит на замок.</p>
+        <p><b class="text-emerald-300">🧱⚔️✨ Ресурсы:</b> Вверху карты указана её цена. Каждый ход вы получаете доход (+2, +3...).</p>
+        <p><b class="text-rose-400">⏱️ Таймер 20 сек:</b> Если не сходить за 20 секунд, случайная карта сбрасывается. За <b>5 пропусков по таймеру</b> засчитывается поражение!</p>
       </div>
-      <button id="btnRulesUnderstand" class="mt-4 w-full py-2 bg-amber-600 hover:bg-amber-500 text-slate-950 font-bold rounded-xl text-xs transition">
+      <button id="btnRulesUnderstand" class="mt-4 w-full py-2 bg-amber-500 text-slate-950 font-black rounded-xl text-xs">
         Всё ясно!
       </button>
     </div>
   </div>
 
-  <!-- MODAL: BATTLE HISTORY LOG -->
+  <!-- ===================================================================== -->
+  <!-- MODAL: BATTLE HISTORY LOG                                             -->
+  <!-- ===================================================================== -->
   <div id="historyModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-3 hidden">
     <div class="bg-slate-900 border-2 border-slate-700 rounded-2xl max-w-md w-full p-4 shadow-2xl flex flex-col max-h-[80vh]">
       <div class="flex items-center justify-between pb-2 border-b border-slate-700">
-        <h2 class="font-fantasy text-sm sm:text-base font-bold text-amber-300 flex items-center gap-1.5">
-          <span>📜</span> Лог сражения
-        </h2>
-        <button id="btnHistoryClose" class="w-7 h-7 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center font-bold">✕</button>
+        <h2 class="font-fantasy text-sm font-bold text-amber-300">📜 Лог сражения</h2>
+        <button id="btnHistoryClose" class="w-7 h-7 rounded-lg bg-slate-800 text-slate-300 flex items-center justify-center font-bold">✕</button>
       </div>
-      <div id="historyLogList" class="flex-1 overflow-y-auto space-y-1.5 my-2.5 pr-1 text-[11px]">
-        <!-- Log entries -->
-      </div>
-      <div class="pt-2 border-t border-slate-700 flex justify-between items-center text-[10px] text-slate-400">
+      <div id="historyLogList" class="flex-1 overflow-y-auto space-y-1.5 my-2 pr-1 text-xs"></div>
+      <div class="pt-2 border-t border-slate-700 flex justify-between items-center text-xs text-slate-400">
         <span id="totalActionsCount">Всего ходов: 0</span>
         <button id="btnClearLog" class="text-rose-400 hover:underline">Очистить</button>
       </div>
     </div>
   </div>
 
-  <!-- MODAL: GAME OVER (VICTORY / DEFEAT) -->
+  <!-- ===================================================================== -->
+  <!-- MODAL: GAME OVER                                                      -->
+  <!-- ===================================================================== -->
   <div id="gameOverModal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-3 hidden">
     <div id="gameOverCard" class="bg-slate-900 border-2 border-amber-500 rounded-2xl max-w-sm w-full p-5 text-center shadow-2xl">
       <div id="gameOverIcon" class="text-5xl mb-1 animate-bounce">🏆</div>
-      <h2 id="gameOverTitle" class="font-fantasy text-xl sm:text-2xl font-black text-amber-400 mb-1">Славная Победа!</h2>
-      <p id="gameOverSubtitle" class="text-xs text-slate-300 mb-3">Замок соперника превращен в руины!</p>
+      <h2 id="gameOverTitle" class="font-fantasy text-xl font-black text-amber-400 mb-1">Славная Победа!</h2>
+      <p id="gameOverSubtitle" class="text-xs text-slate-300 mb-3">Замок соперника разрушен!</p>
 
-      <div class="bg-slate-950/70 rounded-xl p-2.5 mb-3 text-[11px] text-left space-y-1 border border-slate-800">
+      <div class="bg-slate-950/70 rounded-xl p-3 mb-3 text-xs text-left space-y-1 border border-slate-800">
         <div class="flex justify-between"><span class="text-slate-400">Сделано ходов:</span> <span id="statTurns" class="font-bold text-amber-300">0</span></div>
         <div class="flex justify-between"><span class="text-slate-400">Разыграно карт:</span> <span id="statCardsPlayed" class="font-bold text-slate-200">0</span></div>
         <div class="flex justify-between"><span class="text-slate-400">Нанесено урона:</span> <span id="statDamageDealt" class="font-bold text-rose-300">0</span></div>
         <div class="flex justify-between pt-1 border-t border-slate-800 text-amber-300 font-bold">
-          <span class="flex items-center gap-1">🪙 Награда $TOWER:</span> 
+          <span>🪙 Награда $TOWER:</span> 
           <span id="gameOverTokenReward" class="font-mono text-xs">+50 $TOWER</span>
         </div>
       </div>
 
-      <button id="btnPlayAgain" class="w-full py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black rounded-xl text-xs sm:text-sm tracking-wide shadow-lg transition">
-        ⚔️ ИГРАТЬ СНОВА
-      </button>
+      <div class="space-y-2">
+        <button id="btnPlayAgain" class="w-full py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 text-slate-950 font-black rounded-xl text-xs shadow-lg">
+          ⚔️ ИГРАТЬ СНОВА
+        </button>
+        <button id="btnGameOverMainMenu" class="w-full py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold rounded-xl text-xs">
+          🏰 В главное меню
+        </button>
+      </div>
     </div>
   </div>
 
-  <!-- COMPLETE SCRIPT LOGIC -->
+  <!-- ===================================================================== -->
+  <!-- COMPLETE GAME ENGINE & LOGIC                                          -->
+  <!-- ===================================================================== -->
   <script>
-    // --- 52 CARDS DATABASE (ALL CARDS PRESERVED) ---
+    // --- 64 CARDS DATABASE (WITH ULTRA-SHORT, PUNCHY BADGES FOR CARDS) ---
     const CARDS_DB = [
-      {"id": 1, "name": "Стрела разведчика", "type": "attack", "res": "weapons", "cost": 2, "effect": {"type": "damage_wall", "value": 4}, "desc": "Наносит 4 урона стене соперника.", "icon": "🏹"},
-      {"id": 2, "name": "Град стрел", "type": "attack", "res": "weapons", "cost": 4, "effect": {"type": "damage_standard", "value": 6}, "desc": "Наносит 6 урона (сначала стене, остаток замку).", "icon": "🎯"},
-      {"id": 3, "name": "Таран", "type": "attack", "res": "weapons", "cost": 6, "effect": {"type": "damage_wall", "value": 11}, "desc": "Наносит 11 мощного урона стене врага.", "icon": "🪵"},
-      {"id": 4, "name": "Катапульта", "type": "attack", "res": "weapons", "cost": 8, "effect": {"type": "damage_standard", "value": 12}, "desc": "Наносит 12 осадного урона.", "icon": "☄️"},
-      {"id": 5, "name": "Тяжелая баллиста", "type": "attack", "res": "weapons", "cost": 10, "effect": {"type": "damage_standard", "value": 15}, "desc": "Наносит 15 осадного урона.", "icon": "🏹"},
-      {"id": 6, "name": "Осадная башня", "type": "attack", "res": "weapons", "cost": 12, "effect": {"type": "damage_standard", "value": 18}, "desc": "Наносит 18 сокрушительного урона.", "icon": "🗼"},
-      {"id": 7, "name": "Конный налет", "type": "attack", "res": "weapons", "cost": 5, "effect": {"type": "damage_standard", "value": 8}, "desc": "Быстрый рейд: 8 урона сопернику.", "icon": "🐎"},
-      {"id": 8, "name": "Отряд берсерков", "type": "attack", "res": "weapons", "cost": 9, "effect": {"type": "damage_standard", "value": 14}, "desc": "Яростная атака: 14 урона сопернику.", "icon": "🪓"},
-      {"id": 9, "name": "Подкоп под стену", "type": "attack", "res": "weapons", "cost": 7, "effect": {"type": "damage_wall", "value": 13}, "desc": "Подрывает фундамент: 13 урона стене.", "icon": "⛏️"},
-      {"id": 10, "name": "Прямой штурм", "type": "attack", "res": "weapons", "cost": 11, "effect": {"type": "damage_standard", "value": 16}, "desc": "Массированный натиск: 16 урона.", "icon": "⚔️"},
-      {"id": 11, "name": "Огненные стрелы", "type": "attack", "res": "weapons", "cost": 5, "effect": {"type": "damage_standard", "value": 8}, "desc": "Зажигательный обстрел: 8 урона.", "icon": "🔥"},
-      {"id": 12, "name": "Диверсанты", "type": "attack", "res": "weapons", "cost": 8, "effect": {"type": "damage_and_steal", "value": 9, "steal_res": "weapons", "steal_amount": 3}, "desc": "9 урона и крадет 3 оружия у соперника.", "icon": "🗡️"},
-      {"id": 13, "name": "Требушет", "type": "attack", "res": "weapons", "cost": 14, "effect": {"type": "damage_standard", "value": 22}, "desc": "Огромный валун: 22 сокрушительного урона.", "icon": "🪨"},
-      {"id": 14, "name": "Разрушитель ворот", "type": "attack", "res": "weapons", "cost": 13, "effect": {"type": "damage_split", "wall_dmg": 14, "castle_dmg": 6}, "desc": "14 урона стене и 6 прямого урона замку.", "icon": "🚪"},
-      {"id": 15, "name": "Всадники бури", "type": "attack", "res": "weapons", "cost": 7, "effect": {"type": "damage_standard", "value": 11}, "desc": "Стремительный натиск: 11 урона.", "icon": "⚡"},
-      {"id": 16, "name": "Ядовитые метатели", "type": "attack", "res": "weapons", "cost": 6, "effect": {"type": "damage_standard", "value": 10}, "desc": "Ядовитые склянки: 10 урона сопернику.", "icon": "🧪"},
-      {"id": 17, "name": "Осадный голем", "type": "attack", "res": "weapons", "cost": 15, "effect": {"type": "damage_standard", "value": 24}, "desc": "Каменный гигант крушит врага на 24 урона.", "icon": "🗿"},
-      {"id": 18, "name": "Армия титанов", "type": "attack", "res": "weapons", "cost": 18, "effect": {"type": "damage_standard", "value": 28}, "desc": "Великая армия: 28 урона врагу.", "icon": "👑"},
-      {"id": 19, "name": "Каменная кладка", "type": "defense", "res": "bricks", "cost": 2, "effect": {"type": "heal_wall", "value": 4}, "desc": "Укрепляет стену на +4 единицы.", "icon": "🧱"},
-      {"id": 20, "name": "Ремонт ворот", "type": "defense", "res": "bricks", "cost": 3, "effect": {"type": "heal_wall", "value": 6}, "desc": "Восстанавливает +6 к стене.", "icon": "🔨"},
-      {"id": 21, "name": "Укрепленный вал", "type": "defense", "res": "bricks", "cost": 5, "effect": {"type": "heal_wall", "value": 10}, "desc": "+10 к прочности стены.", "icon": "🛡️"},
-      {"id": 22, "name": "Бастион", "type": "defense", "res": "bricks", "cost": 7, "effect": {"type": "heal_wall", "value": 14}, "desc": "Возводит бастион: +14 к стене.", "icon": "🏰"},
-      {"id": 23, "name": "Великая стена", "type": "defense", "res": "bricks", "cost": 10, "effect": {"type": "heal_wall", "value": 20}, "desc": "Монолитная защита: +20 к стене.", "icon": "🧱"},
-      {"id": 24, "name": "Железный частокол", "type": "defense", "res": "bricks", "cost": 4, "effect": {"type": "heal_wall", "value": 8}, "desc": "Укрепляет оборону: +8 к стене.", "icon": "⛓️"},
-      {"id": 25, "name": "Починка замка", "type": "defense", "res": "bricks", "cost": 3, "effect": {"type": "heal_castle", "value": 5}, "desc": "Восстанавливает +5 к здоровью замка.", "icon": "🪚"},
-      {"id": 26, "name": "Дозорная башня", "type": "defense", "res": "bricks", "cost": 6, "effect": {"type": "heal_both", "wall": 6, "castle": 4}, "desc": "Башня дает +6 к стене и +4 к замку.", "icon": "🗼"},
-      {"id": 27, "name": "Гильдия каменщиков", "type": "defense", "res": "bricks", "cost": 5, "effect": {"type": "heal_wall_and_income", "wall": 6, "res": "bricks", "income": 1}, "desc": "+6 к стене и +1 к доходу камня.", "icon": "⚒️"},
-      {"id": 28, "name": "Новая цитадель", "type": "defense", "res": "bricks", "cost": 8, "effect": {"type": "heal_castle", "value": 10}, "desc": "Усиливает твердыню: +10 к замку.", "icon": "🏯"},
-      {"id": 29, "name": "Ров с водой", "type": "defense", "res": "bricks", "cost": 6, "effect": {"type": "heal_wall", "value": 12}, "desc": "Защитный ров: +12 к стене.", "icon": "🌊"},
-      {"id": 30, "name": "Гранитный монолит", "type": "defense", "res": "bricks", "cost": 9, "effect": {"type": "heal_both", "wall": 14, "castle": 4}, "desc": "+14 к стене и +4 к замку.", "icon": "🪨"},
-      {"id": 31, "name": "Укрепление фундамента", "type": "defense", "res": "bricks", "cost": 7, "effect": {"type": "heal_castle", "value": 9}, "desc": "Надежная опора: +9 к здоровью замка.", "icon": "🏛️"},
-      {"id": 32, "name": "Зубчатые парапеты", "type": "defense", "res": "bricks", "cost": 5, "effect": {"type": "heal_wall", "value": 9}, "desc": "Оборонительные зубья: +9 к стене.", "icon": "🛡️"},
-      {"id": 33, "name": "Шедевр зодчих", "type": "defense", "res": "bricks", "cost": 12, "effect": {"type": "heal_both", "wall": 10, "castle": 14}, "desc": "+14 к замку и +10 к стене.", "icon": "📐"},
-      {"id": 34, "name": "Королевский чертог", "type": "defense", "res": "bricks", "cost": 15, "effect": {"type": "heal_castle", "value": 18}, "desc": "Царские покои: +18 к здоровью замка.", "icon": "👑"},
-      {"id": 35, "name": "Неприступный форт", "type": "defense", "res": "bricks", "cost": 14, "effect": {"type": "heal_wall", "value": 25}, "desc": "Мощная фортификация: +25 к стене.", "icon": "🏰"},
-      {"id": 36, "name": "Чудо света", "type": "defense", "res": "bricks", "cost": 18, "effect": {"type": "heal_both", "wall": 16, "castle": 22}, "desc": "Монумент: +22 к замку и +16 к стене.", "icon": "🌟"},
-      {"id": 37, "name": "Огненный шар", "type": "attack", "res": "magic", "cost": 4, "effect": {"type": "damage_standard", "value": 8}, "desc": "Шар огня: 8 урона сопернику.", "icon": "🔥"},
-      {"id": 38, "name": "Цепная молния", "type": "attack", "res": "magic", "cost": 6, "effect": {"type": "damage_standard", "value": 12}, "desc": "Грозовой удар: 12 урона сопернику.", "icon": "⚡"},
-      {"id": 39, "name": "Метеоритный дождь", "type": "attack", "res": "magic", "cost": 12, "effect": {"type": "damage_standard", "value": 20}, "desc": "Падение метеоритов: 20 урона.", "icon": "☄️"},
-      {"id": 40, "name": "Землетрясение", "type": "attack", "res": "magic", "cost": 9, "effect": {"type": "damage_wall", "value": 16}, "desc": "Колебания земли: 16 урона стене.", "icon": "🌋"},
-      {"id": 41, "name": "Магическая брешь", "type": "attack", "res": "magic", "cost": 8, "effect": {"type": "damage_castle_direct", "value": 10}, "desc": "10 чистого урона замку в обход стены!", "icon": "🌀"},
-      {"id": 42, "name": "Ледяное копье", "type": "attack", "res": "magic", "cost": 5, "effect": {"type": "damage_standard", "value": 9}, "desc": "Острый лед: 9 урона сопернику.", "icon": "❄️"},
-      {"id": 43, "name": "Вампирический луч", "type": "hybrid", "res": "magic", "cost": 7, "effect": {"type": "vampire", "damage": 8, "heal": 6}, "desc": "8 урона врагу и +6 к здоровью замка.", "icon": "🩸"},
-      {"id": 44, "name": "Драконье пламя", "type": "attack", "res": "magic", "cost": 14, "effect": {"type": "damage_standard", "value": 22}, "desc": "Дыхание дракона: 22 мощного урона.", "icon": "🐲"},
-      {"id": 45, "name": "Исцеляющий свет", "type": "defense", "res": "magic", "cost": 3, "effect": {"type": "heal_castle", "value": 6}, "desc": "Свет жизни: +6 к здоровью замка.", "icon": "✨"},
-      {"id": 46, "name": "Магический барьер", "type": "defense", "res": "magic", "cost": 5, "effect": {"type": "heal_wall", "value": 11}, "desc": "Силовое поле: +11 к прочности стены.", "icon": "🔮"},
-      {"id": 47, "name": "Регенерация замка", "type": "defense", "res": "magic", "cost": 7, "effect": {"type": "heal_castle", "value": 11}, "desc": "Заклинание ремонта: +11 к замку.", "icon": "💚"},
-      {"id": 48, "name": "Благословение", "type": "defense", "res": "magic", "cost": 10, "effect": {"type": "heal_both", "wall": 9, "castle": 12}, "desc": "Благодать: +12 к замку и +9 к стене.", "icon": "🕊️"},
-      {"id": 49, "name": "Рунный щит", "type": "defense", "res": "magic", "cost": 6, "effect": {"type": "heal_wall", "value": 13}, "desc": "Руны древних: +13 к прочности стены.", "icon": "🛡️"},
-      {"id": 50, "name": "Призма гармонии", "type": "defense", "res": "magic", "cost": 8, "effect": {"type": "heal_both", "wall": 9, "castle": 9}, "desc": "Магическая гармония: +9 к замку и стене.", "icon": "💎"},
-      {"id": 51, "name": "Воскрешение руин", "type": "defense", "res": "magic", "cost": 13, "effect": {"type": "heal_both", "wall": 16, "castle": 16}, "desc": "+16 к замку и +16 к стене.", "icon": "🌟"},
-      {"id": 52, "name": "Гнев Древних", "type": "hybrid", "res": "magic", "cost": 16, "effect": {"type": "vampire", "damage": 22, "heal": 10}, "desc": "22 урона врагу и +10 к здоровью замка.", "icon": "⚡"},
-      {"id": 53, "name": "Каменоломня", "type": "economy", "res": "bricks", "cost": 4, "effect": {"type": "income_boost", "res": "bricks", "value": 1}, "desc": "+1 к добыче камня (+1 кирпич/ход).", "icon": "⛏️", "stat": "+1 Шахта камня"},
-      {"id": 54, "name": "Глубокая шахта", "type": "economy", "res": "bricks", "cost": 8, "effect": {"type": "income_boost_and_wall", "res": "bricks", "value": 2, "wall": 6}, "desc": "+2 к доходу камня и +6 к стене.", "icon": "⛰️", "stat": "+2 Шахта, +6 Стена"},
-      {"id": 55, "name": "Оружейная кузница", "type": "economy", "res": "weapons", "cost": 4, "effect": {"type": "income_boost", "res": "weapons", "value": 1}, "desc": "+1 к доходу оружия каждый ход.", "icon": "⚒️", "stat": "+1 Доход оружия"},
-      {"id": 56, "name": "Военные казармы", "type": "economy", "res": "weapons", "cost": 8, "effect": {"type": "income_boost_and_attack", "res": "weapons", "value": 2, "damage": 7}, "desc": "+2 к доходу оружия и 7 урона врагу.", "icon": "🛡️", "stat": "+2 Оружие, 7 Атака"},
-      {"id": 57, "name": "Магический колодец", "type": "economy", "res": "magic", "cost": 4, "effect": {"type": "income_boost", "res": "magic", "value": 1}, "desc": "+1 к притоку магии каждый ход.", "icon": "🔮", "stat": "+1 Приток магии"},
-      {"id": 58, "name": "Алтарь стихий", "type": "economy", "res": "magic", "cost": 8, "effect": {"type": "income_boost_and_castle", "res": "magic", "value": 2, "castle": 7}, "desc": "+2 к притоку магии и +7 к замку.", "icon": "✨", "stat": "+2 Магия, +7 Замок"},
-      {"id": 59, "name": "Золотой век", "type": "economy", "res": "bricks", "cost": 13, "effect": {"type": "income_boost_all", "value": 1}, "desc": "Расцвет: +1 ко всем доходам (+1 камень, +1 оружие, +1 магия).", "icon": "👑", "stat": "+1 Ко всем доходам"},
-      {"id": 60, "name": "Диверсия на руднике", "type": "sabotage", "res": "weapons", "cost": 6, "effect": {"type": "income_damage", "res": "bricks", "value": 1, "damage": 6}, "desc": "−1 шахта камня врага (мин. 1) и 6 урона стене.", "icon": "🧨", "stat": "−1 Шахта врага, 6 Урон"},
-      {"id": 61, "name": "Саботаж кузницы", "type": "sabotage", "res": "weapons", "cost": 7, "effect": {"type": "income_damage_and_steal", "res": "weapons", "value": 1, "steal": 5}, "desc": "−1 доход оружия врага (мин. 1) и крадет 5 оружия.", "icon": "🗡️", "stat": "−1 Оружейная, Кража 5"},
-      {"id": 62, "name": "Осквернение источника", "type": "sabotage", "res": "magic", "cost": 6, "effect": {"type": "income_damage", "res": "magic", "value": 1, "damage": 8}, "desc": "−1 приток магии врага (мин. 1) и 8 урона.", "icon": "☠️", "stat": "−1 Магия врага, 8 Урон"},
-      {"id": 63, "name": "Шпионаж и разруха", "type": "sabotage", "res": "weapons", "cost": 9, "effect": {"type": "income_damage_and_castle", "res": "weapons", "value": 1, "castle_dmg": 8}, "desc": "−1 доход оружия врага и 8 прямого урона по замку.", "icon": "🥷", "stat": "−1 Доход, 8 урона замку"},
-      {"id": 64, "name": "Великий обвал", "type": "sabotage", "res": "magic", "cost": 11, "effect": {"type": "income_damage_all", "value": 1, "wall_damage": 12}, "desc": "−1 ко ВСЕМ доходам врага (мин. 1) и 12 урона стене.", "icon": "🌋", "stat": "−1 Все доходы врага"}
+      {"id": 1, "name": "Стрела", "type": "attack", "res": "weapons", "cost": 2, "effect": {"type": "damage_wall", "value": 4}, "desc": "Ломает стену врага на 4 HP", "icon": "🏹", "shortTag": "🧱 −4 СТЕНА"},
+      {"id": 2, "name": "Град стрел", "type": "attack", "res": "weapons", "cost": 4, "effect": {"type": "damage_standard", "value": 6}, "desc": "Наносит 6 урона врагу", "icon": "🎯", "shortTag": "💥 −6 УРОН"},
+      {"id": 3, "name": "Таран", "type": "attack", "res": "weapons", "cost": 6, "effect": {"type": "damage_wall", "value": 11}, "desc": "Ломает стену врага на 11 HP", "icon": "🪵", "shortTag": "🧱 −11 СТЕНА"},
+      {"id": 4, "name": "Катапульта", "type": "attack", "res": "weapons", "cost": 8, "effect": {"type": "damage_standard", "value": 12}, "desc": "Наносит 12 урона врагу", "icon": "☄️", "shortTag": "💥 −12 УРОН"},
+      {"id": 5, "name": "Баллиста", "type": "attack", "res": "weapons", "cost": 10, "effect": {"type": "damage_standard", "value": 15}, "desc": "Наносит 15 урона врагу", "icon": "🏹", "shortTag": "💥 −15 УРОН"},
+      {"id": 6, "name": "Осадная башня", "type": "attack", "res": "weapons", "cost": 12, "effect": {"type": "damage_standard", "value": 18}, "desc": "Наносит 18 урона врагу", "icon": "🗼", "shortTag": "💥 −18 УРОН"},
+      {"id": 7, "name": "Конный налет", "type": "attack", "res": "weapons", "cost": 5, "effect": {"type": "damage_standard", "value": 8}, "desc": "Наносит 8 урона врагу", "icon": "🐎", "shortTag": "💥 −8 УРОН"},
+      {"id": 8, "name": "Берсерки", "type": "attack", "res": "weapons", "cost": 9, "effect": {"type": "damage_standard", "value": 14}, "desc": "Наносит 14 урона врагу", "icon": "🪓", "shortTag": "💥 −14 УРОН"},
+      {"id": 9, "name": "Подкоп", "type": "attack", "res": "weapons", "cost": 7, "effect": {"type": "damage_wall", "value": 13}, "desc": "Ломает стену врага на 13 HP", "icon": "⛏️", "shortTag": "🧱 −13 СТЕНА"},
+      {"id": 10, "name": "Прямой штурм", "type": "attack", "res": "weapons", "cost": 11, "effect": {"type": "damage_standard", "value": 16}, "desc": "Наносит 16 урона врагу", "icon": "⚔️", "shortTag": "💥 −16 УРОН"},
+      {"id": 11, "name": "Огненные стрелы", "type": "attack", "res": "weapons", "cost": 5, "effect": {"type": "damage_standard", "value": 8}, "desc": "Наносит 8 урона врагу", "icon": "🔥", "shortTag": "💥 −8 УРОН"},
+      {"id": 12, "name": "Диверсанты", "type": "attack", "res": "weapons", "cost": 8, "effect": {"type": "damage_and_steal", "value": 9, "steal_res": "weapons", "steal_amount": 3}, "desc": "9 урона и крадёт 3 оружия", "icon": "🗡️", "shortTag": "💥−9 | +3⚔️"},
+      {"id": 13, "name": "Требушет", "type": "attack", "res": "weapons", "cost": 14, "effect": {"type": "damage_standard", "value": 22}, "desc": "Наносит 22 урона врагу", "icon": "🪨", "shortTag": "💥 −22 УРОН"},
+      {"id": 14, "name": "Таран ворот", "type": "attack", "res": "weapons", "cost": 13, "effect": {"type": "damage_split", "wall_dmg": 14, "castle_dmg": 6}, "desc": "Стена −14 и Замок врага −6", "icon": "🚪", "shortTag": "🧱−14 | 🏰−6"},
+      {"id": 15, "name": "Всадники", "type": "attack", "res": "weapons", "cost": 7, "effect": {"type": "damage_standard", "value": 11}, "desc": "Наносит 11 урона врагу", "icon": "⚡", "shortTag": "💥 −11 УРОН"},
+      {"id": 16, "name": "Метатели", "type": "attack", "res": "weapons", "cost": 6, "effect": {"type": "damage_standard", "value": 10}, "desc": "Наносит 10 урона врагу", "icon": "🧪", "shortTag": "💥 −10 УРОН"},
+      {"id": 17, "name": "Голем", "type": "attack", "res": "weapons", "cost": 15, "effect": {"type": "damage_standard", "value": 24}, "desc": "Наносит 24 урона врагу", "icon": "🗿", "shortTag": "💥 −24 УРОН"},
+      {"id": 18, "name": "Титаны", "type": "attack", "res": "weapons", "cost": 18, "effect": {"type": "damage_standard", "value": 28}, "desc": "Наносит 28 урона врагу", "icon": "👑", "shortTag": "💥 −28 УРОН"},
+      {"id": 19, "name": "Кладка", "type": "defense", "res": "bricks", "cost": 2, "effect": {"type": "heal_wall", "value": 4}, "desc": "Укрепляет вашу стену на +4 HP", "icon": "🧱", "shortTag": "🛡️ +4 СТЕНА"},
+      {"id": 20, "name": "Ремонт ворот", "type": "defense", "res": "bricks", "cost": 3, "effect": {"type": "heal_wall", "value": 6}, "desc": "Укрепляет вашу стену на +6 HP", "icon": "🔨", "shortTag": "🛡️ +6 СТЕНА"},
+      {"id": 21, "name": "Каменный вал", "type": "defense", "res": "bricks", "cost": 5, "effect": {"type": "heal_wall", "value": 10}, "desc": "Укрепляет вашу стену на +10 HP", "icon": "🛡️", "shortTag": "🛡️ +10 СТЕНА"},
+      {"id": 22, "name": "Бастион", "type": "defense", "res": "bricks", "cost": 7, "effect": {"type": "heal_wall", "value": 14}, "desc": "Укрепляет вашу стену на +14 HP", "icon": "🏰", "shortTag": "🛡️ +14 СТЕНА"},
+      {"id": 23, "name": "Великая стена", "type": "defense", "res": "bricks", "cost": 10, "effect": {"type": "heal_wall", "value": 20}, "desc": "Укрепляет вашу стену на +20 HP", "icon": "🧱", "shortTag": "🛡️ +20 СТЕНА"},
+      {"id": 24, "name": "Частокол", "type": "defense", "res": "bricks", "cost": 4, "effect": {"type": "heal_wall", "value": 8}, "desc": "Укрепляет вашу стену на +8 HP", "icon": "⛓️", "shortTag": "🛡️ +8 СТЕНА"},
+      {"id": 25, "name": "Починка замка", "type": "defense", "res": "bricks", "cost": 3, "effect": {"type": "heal_castle", "value": 5}, "desc": "Строит ваш Замок на +5 HP", "icon": "🪚", "shortTag": "🏰 +5 ЗАМОК"},
+      {"id": 26, "name": "Дозорная башня", "type": "defense", "res": "bricks", "cost": 6, "effect": {"type": "heal_both", "wall": 6, "castle": 4}, "desc": "Ваш Замок +4 HP и Стена +6 HP", "icon": "🗼", "shortTag": "🏰+4 | 🛡️+6"},
+      {"id": 27, "name": "Каменщики", "type": "defense", "res": "bricks", "cost": 5, "effect": {"type": "heal_wall_and_income", "wall": 6, "res": "bricks", "income": 1}, "desc": "Стена +6 и доход камня +1/ход", "icon": "⚒️", "shortTag": "🛡️+6 | ⛏️+1"},
+      {"id": 28, "name": "Цитадель", "type": "defense", "res": "bricks", "cost": 8, "effect": {"type": "heal_castle", "value": 10}, "desc": "Строит ваш Замок на +10 HP", "icon": "🏯", "shortTag": "🏰 +10 ЗАМОК"},
+      {"id": 29, "name": "Ров с водой", "type": "defense", "res": "bricks", "cost": 6, "effect": {"type": "heal_wall", "value": 12}, "desc": "Укрепляет вашу стену на +12 HP", "icon": "🌊", "shortTag": "🛡️ +12 СТЕНА"},
+      {"id": 30, "name": "Монолит", "type": "defense", "res": "bricks", "cost": 9, "effect": {"type": "heal_both", "wall": 14, "castle": 4}, "desc": "Ваш Замок +4 HP и Стена +14 HP", "icon": "🪨", "shortTag": "🏰+4 | 🛡️+14"},
+      {"id": 31, "name": "Своды замка", "type": "defense", "res": "bricks", "cost": 7, "effect": {"type": "heal_castle", "value": 9}, "desc": "Строит ваш Замок на +9 HP", "icon": "🏛️", "shortTag": "🏰 +9 ЗАМОК"},
+      {"id": 32, "name": "Парапеты", "type": "defense", "res": "bricks", "cost": 5, "effect": {"type": "heal_wall", "value": 9}, "desc": "Укрепляет вашу стену на +9 HP", "icon": "🛡️", "shortTag": "🛡️ +9 СТЕНА"},
+      {"id": 33, "name": "Шедевр зодчих", "type": "defense", "res": "bricks", "cost": 12, "effect": {"type": "heal_both", "wall": 10, "castle": 14}, "desc": "Ваш Замок +14 HP и Стена +10 HP", "icon": "📐", "shortTag": "🏰+14 | 🛡️+10"},
+      {"id": 34, "name": "Чертог короля", "type": "defense", "res": "bricks", "cost": 15, "effect": {"type": "heal_castle", "value": 18}, "desc": "Строит ваш Замок на +18 HP", "icon": "👑", "shortTag": "🏰 +18 ЗАМОК"},
+      {"id": 35, "name": "Форт", "type": "defense", "res": "bricks", "cost": 14, "effect": {"type": "heal_wall", "value": 25}, "desc": "Укрепляет вашу стену на +25 HP", "icon": "🏰", "shortTag": "🛡️ +25 СТЕНА"},
+      {"id": 36, "name": "Чудо света", "type": "defense", "res": "bricks", "cost": 18, "effect": {"type": "heal_both", "wall": 16, "castle": 22}, "desc": "Ваш Замок +22 HP и Стена +16 HP", "icon": "🌟", "shortTag": "🏰+22 | 🛡️+16"},
+      {"id": 37, "name": "Огненный шар", "type": "attack", "res": "magic", "cost": 4, "effect": {"type": "damage_standard", "value": 8}, "desc": "Наносит 8 урона врагу", "icon": "🔥", "shortTag": "💥 −8 УРОН"},
+      {"id": 38, "name": "Молния", "type": "attack", "res": "magic", "cost": 6, "effect": {"type": "damage_standard", "value": 12}, "desc": "Наносит 12 урона врагу", "icon": "⚡", "shortTag": "💥 −12 УРОН"},
+      {"id": 39, "name": "Метеорит", "type": "attack", "res": "magic", "cost": 12, "effect": {"type": "damage_standard", "value": 20}, "desc": "Наносит 20 урона врагу", "icon": "☄️", "shortTag": "💥 −20 УРОН"},
+      {"id": 40, "name": "Землетрясение", "type": "attack", "res": "magic", "cost": 9, "effect": {"type": "damage_wall", "value": 16}, "desc": "Ломает стену врага на 16 HP", "icon": "🌋", "shortTag": "🧱 −16 СТЕНА"},
+      {"id": 41, "name": "Маг. брешь", "type": "attack", "res": "magic", "cost": 8, "effect": {"type": "damage_castle_direct", "value": 10}, "desc": "Бьёт на 10 прямо в Замок врага!", "icon": "🌀", "shortTag": "🎯 −10 ЗАМОК"},
+      {"id": 42, "name": "Ледяное копье", "type": "attack", "res": "magic", "cost": 5, "effect": {"type": "damage_standard", "value": 9}, "desc": "Наносит 9 урона врагу", "icon": "❄️", "shortTag": "💥 −9 УРОН"},
+      {"id": 43, "name": "Вампиризм", "type": "hybrid", "res": "magic", "cost": 7, "effect": {"type": "vampire", "damage": 8, "heal": 6}, "desc": "Врагу −8 урона, Замку +6 HP", "icon": "🩸", "shortTag": "💥−8 | 🏰+6"},
+      {"id": 44, "name": "Дракон", "type": "attack", "res": "magic", "cost": 14, "effect": {"type": "damage_standard", "value": 22}, "desc": "Наносит 22 урона врагу", "icon": "🐲", "shortTag": "💥 −22 УРОН"},
+      {"id": 45, "name": "Свет жизни", "type": "defense", "res": "magic", "cost": 3, "effect": {"type": "heal_castle", "value": 6}, "desc": "Лечит ваш Замок на +6 HP", "icon": "✨", "shortTag": "🏰 +6 ЗАМОК"},
+      {"id": 46, "name": "Маг. барьер", "type": "defense", "res": "magic", "cost": 5, "effect": {"type": "heal_wall", "value": 11}, "desc": "Укрепляет вашу стену на +11 HP", "icon": "🔮", "shortTag": "🛡️ +11 СТЕНА"},
+      {"id": 47, "name": "Регенерация", "type": "defense", "res": "magic", "cost": 7, "effect": {"type": "heal_castle", "value": 11}, "desc": "Лечит ваш Замок на +11 HP", "icon": "💚", "shortTag": "🏰 +11 ЗАМОК"},
+      {"id": 48, "name": "Благодать", "type": "defense", "res": "magic", "cost": 10, "effect": {"type": "heal_both", "wall": 9, "castle": 12}, "desc": "Ваш Замок +12 HP и Стена +9 HP", "icon": "🕊️", "shortTag": "🏰+12 | 🛡️+9"},
+      {"id": 49, "name": "Рунный щит", "type": "defense", "res": "magic", "cost": 6, "effect": {"type": "heal_wall", "value": 13}, "desc": "Укрепляет вашу стену на +13 HP", "icon": "🛡️", "shortTag": "🛡️ +13 СТЕНА"},
+      {"id": 50, "name": "Гармония", "type": "defense", "res": "magic", "cost": 8, "effect": {"type": "heal_both", "wall": 9, "castle": 9}, "desc": "Ваш Замок +9 HP и Стена +9 HP", "icon": "💎", "shortTag": "🏰+9 | 🛡️+9"},
+      {"id": 51, "name": "Воскрешение", "type": "defense", "res": "magic", "cost": 13, "effect": {"type": "heal_both", "wall": 16, "castle": 16}, "desc": "Ваш Замок +16 HP и Стена +16 HP", "icon": "🌟", "shortTag": "🏰+16 | 🛡️+16"},
+      {"id": 52, "name": "Гнев Древних", "type": "hybrid", "res": "magic", "cost": 16, "effect": {"type": "vampire", "damage": 22, "heal": 10}, "desc": "Врагу −22 урона, Замку +10 HP", "icon": "⚡", "shortTag": "💥−22 | 🏰+10"},
+      {"id": 53, "name": "Каменоломня", "type": "economy", "res": "bricks", "cost": 4, "effect": {"type": "income_boost", "res": "bricks", "value": 1}, "desc": "Доход камня +1 за ход", "icon": "⛏️", "shortTag": "📈 +1 КАМЕНЬ"},
+      {"id": 54, "name": "Шахта", "type": "economy", "res": "bricks", "cost": 8, "effect": {"type": "income_boost_and_wall", "res": "bricks", "value": 2, "wall": 6}, "desc": "Доход камня +2/ход и Стена +6", "icon": "⛰️", "shortTag": "📈+2🧱 | 🛡️+6"},
+      {"id": 55, "name": "Кузница", "type": "economy", "res": "weapons", "cost": 4, "effect": {"type": "income_boost", "res": "weapons", "value": 1}, "desc": "Доход оружия +1 за ход", "icon": "⚒️", "shortTag": "📈 +1 ОРУЖИЕ"},
+      {"id": 56, "name": "Казармы", "type": "economy", "res": "weapons", "cost": 8, "effect": {"type": "income_boost_and_attack", "res": "weapons", "value": 2, "damage": 7}, "desc": "Доход оружия +2/ход и 7 урона", "icon": "🛡️", "shortTag": "📈+2⚔️ | 💥−7"},
+      {"id": 57, "name": "Маг. колодец", "type": "economy", "res": "magic", "cost": 4, "effect": {"type": "income_boost", "res": "magic", "value": 1}, "desc": "Доход магии +1 за ход", "icon": "🔮", "shortTag": "📈 +1 МАГИЯ"},
+      {"id": 58, "name": "Алтарь", "type": "economy", "res": "magic", "cost": 8, "effect": {"type": "income_boost_and_castle", "res": "magic", "value": 2, "castle": 7}, "desc": "Доход магии +2/ход и Замок +7", "icon": "✨", "shortTag": "📈+2✨ | 🏰+7"},
+      {"id": 59, "name": "Золотой век", "type": "economy", "res": "bricks", "cost": 13, "effect": {"type": "income_boost_all", "value": 1}, "desc": "Все ваши доходы +1 за ход!", "icon": "👑", "shortTag": "👑 +1 ВСЕ ДОХ."},
+      {"id": 60, "name": "Взрыв шахты", "type": "sabotage", "res": "weapons", "cost": 6, "effect": {"type": "income_damage", "res": "bricks", "value": 1, "damage": 6}, "desc": "Доход камня врага −1 и 6 урона", "icon": "🧨", "shortTag": "💣−1🧱 | 💥−6"},
+      {"id": 61, "name": "Саботаж", "type": "sabotage", "res": "weapons", "cost": 7, "effect": {"type": "income_damage_and_steal", "res": "weapons", "value": 1, "steal": 5}, "desc": "Доход оружия врага −1, кража 5⚔️", "icon": "🗡️", "shortTag": "💣−1⚔️ | +5⚔️"},
+      {"id": 62, "name": "Осквернение", "type": "sabotage", "res": "magic", "cost": 6, "effect": {"type": "income_damage", "res": "magic", "value": 1, "damage": 8}, "desc": "Доход магии врага −1 и 8 урона", "icon": "☠️", "shortTag": "💣−1✨ | 💥−8"},
+      {"id": 63, "name": "Шпионаж", "type": "sabotage", "res": "weapons", "cost": 9, "effect": {"type": "income_damage_and_castle", "res": "weapons", "value": 1, "castle_dmg": 8}, "desc": "Доход врага −1 и Замок врага −8", "icon": "🥷", "shortTag": "💣−1 | 🎯−8"},
+      {"id": 64, "name": "Обвал", "type": "sabotage", "res": "magic", "cost": 11, "effect": {"type": "income_damage_all", "value": 1, "wall_damage": 12}, "desc": "Все доходы врага −1 и Стена −12", "icon": "🌋", "shortTag": "🌋−1 ВСЕ | 🧱−12"}
+    ];
+
+    const ONLINE_OPPONENTS_POOL = [
+      { name: "Александр_Князь", avatar: "⚔️", ratingOffset: 15 },
+      { name: "Dmitry_Storm", avatar: "🐉", ratingOffset: -10 },
+      { name: "Воин_Севера", avatar: "🛡️", ratingOffset: 25 },
+      { name: "Магистр_Огня", avatar: "🧙‍♂️", ratingOffset: -20 },
+      { name: "King_Arthur", avatar: "👑", ratingOffset: 30 },
+      { name: "Стрелок_Тьмы", avatar: "🏹", ratingOffset: -5 }
     ];
 
     // --- USER PROFILE & ACCOUNT SYSTEM ---
@@ -751,7 +839,9 @@
       losses: 0,
       rating: 1000,
       isAuth: false,
-      tokens: 250, // Стартовый приветственный баланс $TOWER
+      tokens: 250,
+      invitedCount: 0,
+      addedToHome: false,
       lastClaimTime: Date.now()
     };
 
@@ -776,15 +866,41 @@
     function updateProfileUI() {
       document.getElementById('headerAvatar').innerText = UserAccount.avatar;
       document.getElementById('headerPlayerName').innerText = UserAccount.name;
-      document.getElementById('headerPlayerRating').innerText = `Рейтинг: ${UserAccount.rating}`;
-      document.getElementById('p1DisplayTitle').innerText = `${UserAccount.name} (${UserAccount.avatar})`;
-      
-      // Token display update
+      document.getElementById('headerPlayerRating').innerText = `${UserAccount.rating}`;
+      document.getElementById('p1DisplayTitle').innerText = UserAccount.name;
+      const p1BanAv = document.getElementById('p1BannerAvatar');
+      if (p1BanAv) p1BanAv.innerText = UserAccount.avatar;
+      const arenaP1 = document.getElementById('arenaP1Name');
+      if (arenaP1) arenaP1.innerText = `${UserAccount.avatar} ${UserAccount.name} (${UserAccount.rating})`;
+
       const tokenCountEl = document.getElementById('headerTokenCount');
-      if (tokenCountEl) tokenCountEl.innerText = `${(UserAccount.tokens || 0).toLocaleString()} $TOWER`;
+      if (tokenCountEl) tokenCountEl.innerText = `${(UserAccount.tokens || 0).toLocaleString()}`;
       const modalTokenEl = document.getElementById('modalTokenBalance');
       if (modalTokenEl) modalTokenEl.innerText = `${(UserAccount.tokens || 0).toLocaleString()} $TOWER`;
-      
+
+      const menuAvatar = document.getElementById('menuPlayerAvatar');
+      if (menuAvatar) menuAvatar.innerText = UserAccount.avatar;
+      const menuName = document.getElementById('menuPlayerName');
+      if (menuName) menuName.innerText = UserAccount.name;
+      const menuRating = document.getElementById('menuPlayerRating');
+      if (menuRating) menuRating.innerText = UserAccount.rating;
+      const menuWins = document.getElementById('menuPlayerWins');
+      if (menuWins) menuWins.innerText = UserAccount.wins;
+      const menuTokens = document.getElementById('menuTokenBalance');
+      if (menuTokens) menuTokens.innerText = `🪙 ${(UserAccount.tokens || 0).toLocaleString()}`;
+      const menuInvited = document.getElementById('menuInvitedCount');
+      if (menuInvited) menuInvited.innerText = UserAccount.invitedCount || 0;
+
+      if (UserAccount.addedToHome) {
+        const addBtn = document.getElementById('btnAddGameToHome');
+        const addTxt = document.getElementById('addHomeStatusText');
+        if (addBtn) {
+          addBtn.innerText = "✓ Добавлено";
+          addBtn.className = "px-2.5 py-1.5 rounded-xl bg-slate-800 text-emerald-400 font-bold text-xs shrink-0";
+        }
+        if (addTxt) addTxt.innerHTML = "Бонус <b>+500 🪙</b> получен!";
+      }
+
       document.getElementById('inputNickname').value = UserAccount.name;
       document.getElementById('statProfileWins').innerText = UserAccount.wins;
       document.getElementById('statProfileLosses').innerText = UserAccount.losses;
@@ -792,12 +908,18 @@
     }
 
     // --- GAME ENGINE STATE ---
+    const TURN_TIME_LIMIT = 20;
+    const MAX_MISSED_TURNS = 5;
+
     const GameState = {
-      mode: 'bot', // 'bot' or 'online'
+      mode: 'matched',
       isOnlineHost: false,
+      matchStarted: false,
       turn: 1,
-      currentTurnPlayer: 1, // 1 (Local player) or 2 (Bot / Online Opponent)
-      actionState: 'play', // 'play' or 'discard'
+      currentTurnPlayer: 1,
+      actionState: 'play',
+      turnSecondsLeft: TURN_TIME_LIMIT,
+      turnTimerInterval: null,
       soundEnabled: true,
       volume: 0.7,
       history: [],
@@ -807,17 +929,20 @@
         wall: 15,
         maxCastle: 100,
         maxWall: 100,
+        missedTurns: 0,
         resources: { bricks: 10, weapons: 10, magic: 10 },
         incomes: { bricks: 2, weapons: 2, magic: 2 },
         hand: []
       },
       p2: {
-        name: "ИИ Соперник",
+        name: "Александр_Князь",
         avatar: "⚔️",
+        rating: 1015,
         castle: 30,
         wall: 15,
         maxCastle: 100,
         maxWall: 100,
+        missedTurns: 0,
         resources: { bricks: 10, weapons: 10, magic: 10 },
         incomes: { bricks: 2, weapons: 2, magic: 2 },
         hand: []
@@ -826,6 +951,114 @@
       discard: [],
       isGameOver: false
     };
+
+    // --- 20-SECOND TURN TIMER ENGINE ---
+    function stopTurnTimer() {
+      if (GameState.turnTimerInterval) {
+        clearInterval(GameState.turnTimerInterval);
+        GameState.turnTimerInterval = null;
+      }
+    }
+
+    function startTurnTimer() {
+      stopTurnTimer();
+      if (GameState.isGameOver || !GameState.matchStarted) return;
+
+      GameState.turnSecondsLeft = TURN_TIME_LIMIT;
+      updateTimerUI();
+
+      GameState.turnTimerInterval = setInterval(() => {
+        if (GameState.isGameOver || !GameState.matchStarted) {
+          stopTurnTimer();
+          return;
+        }
+        const mainMenu = document.getElementById('mainMenuModal');
+        if (mainMenu && !mainMenu.classList.contains('hidden')) {
+          return;
+        }
+
+        GameState.turnSecondsLeft--;
+        updateTimerUI();
+
+        if (GameState.currentTurnPlayer === 1 && GameState.turnSecondsLeft <= 5 && GameState.turnSecondsLeft > 0) {
+          playSound('discard');
+        }
+
+        if (GameState.turnSecondsLeft <= 0) {
+          stopTurnTimer();
+          handleTurnTimeout();
+        }
+      }, 1000);
+    }
+
+    function updateTimerUI() {
+      const secEl = document.getElementById('turnTimerSeconds');
+      const badgeEl = document.getElementById('turnTimerBadge');
+      const barEl = document.getElementById('turnTimerBar');
+      const pct = Math.max(0, (GameState.turnSecondsLeft / TURN_TIME_LIMIT) * 100);
+
+      if (secEl) secEl.innerText = `${GameState.turnSecondsLeft}с`;
+      if (barEl) {
+        barEl.style.width = `${pct}%`;
+        if (GameState.turnSecondsLeft <= 5) {
+          barEl.className = "h-full bg-rose-500 transition-all duration-300";
+        } else if (GameState.turnSecondsLeft <= 10) {
+          barEl.className = "h-full bg-amber-400 transition-all duration-300";
+        } else {
+          barEl.className = "h-full bg-emerald-400 transition-all duration-300";
+        }
+      }
+
+      if (badgeEl) {
+        if (GameState.turnSecondsLeft <= 5 && GameState.currentTurnPlayer === 1) {
+          badgeEl.className = "px-2 py-0.5 rounded-full bg-rose-950 border-2 border-rose-500 text-rose-300 font-mono font-black text-[11px] flex items-center gap-0.5 shrink-0 timer-urgent";
+        } else {
+          badgeEl.className = "px-2 py-0.5 rounded-full bg-slate-800 border border-amber-500/50 text-amber-300 font-mono font-black text-[11px] flex items-center gap-0.5 shrink-0";
+        }
+      }
+    }
+
+    function handleTurnTimeout() {
+      if (GameState.isGameOver) return;
+
+      if (GameState.currentTurnPlayer === 1) {
+        GameState.p1.missedTurns++;
+        const missed = GameState.p1.missedTurns;
+        const missedEl = document.getElementById('p1MissedCount');
+        if (missedEl) missedEl.innerText = missed;
+
+        playSound('wall_hit');
+        triggerHaptic('error');
+
+        if (GameState.p1.hand.length > 0) {
+          const randIdx = Math.floor(Math.random() * GameState.p1.hand.length);
+          const droppedCard = GameState.p1.hand.splice(randIdx, 1)[0];
+          GameState.discard.push(droppedCard);
+          GameState.p1.hand.push(drawCard());
+
+          showFloatingText('p1CastleFloat', `⏱️ СБРОС (${missed}/5)`, false);
+          updatePlayedStage("Таймер 20с", droppedCard.name, `Пропуск хода ${missed} из ${MAX_MISSED_TURNS}`, "⏱️", "p1");
+          logAction("p1", `пропустил ход по таймеру (20с)! Сброшена «${droppedCard.name}» (${missed}/${MAX_MISSED_TURNS})`);
+
+          if (GameState.mode === 'online') {
+            sendNetAction({ actionType: 'discard', cardId: droppedCard.id });
+          }
+        }
+
+        updateUI();
+
+        if (missed >= MAX_MISSED_TURNS) {
+          finishGame(2, `Поражение за бездействие: вы пропустили ${MAX_MISSED_TURNS} ходов по таймеру!`);
+          return;
+        }
+
+        endTurn();
+      } else {
+        if (GameState.mode !== 'online') {
+          runBotTurn();
+        }
+      }
+    }
 
     // --- YANDEX GAMES SDK WRAPPER ---
     let ysdk = null;
@@ -848,21 +1081,14 @@
               saveProfile();
             }
           }).catch(() => {});
-        }).catch(err => {
-          console.log('YaGames offline/local test:', err);
-        });
+        }).catch(() => {});
       }
     }
 
     function showYandexAd() {
       if (ysdk && ysdk.adv && typeof ysdk.adv.showFullscreenAdv === 'function') {
         try {
-          ysdk.adv.showFullscreenAdv({
-            callbacks: {
-              onClose: function() {},
-              onError: function(e) { console.warn("Adv error:", e); }
-            }
-          });
+          ysdk.adv.showFullscreenAdv({ callbacks: { onClose: function() {}, onError: function() {} } });
         } catch(e) {}
       }
     }
@@ -879,7 +1105,6 @@
     }
 
     function playSound(type) {
-      // Trigger native Telegram haptic feedback
       if (type === 'attack' || type === 'wall_hit') triggerHaptic('heavy');
       else if (type === 'card_play' || type === 'heal') triggerHaptic('impact');
       else if (type === 'victory') triggerHaptic('success');
@@ -954,7 +1179,7 @@
           g.connect(master);
           osc.start(now);
           osc.stop(now + 0.14);
-                } else if (type === 'coin') {
+        } else if (type === 'coin') {
           [987, 1318, 1760].forEach((f, i) => {
             const osc = ctx.createOscillator();
             const g = ctx.createGain();
@@ -1047,8 +1272,8 @@
       const container = document.getElementById(elementId);
       if (!container) return;
       const el = document.createElement('div');
-      el.className = `float-text font-black font-fantasy text-xs sm:text-sm px-2 py-0.5 rounded-full shadow-lg ${
-        isPositive ? 'text-emerald-300 bg-emerald-950/90 border border-emerald-500/70' : 'text-rose-300 bg-rose-950/90 border border-rose-500/70'
+      el.className = `float-text font-black font-fantasy text-[11px] sm:text-xs px-2 py-0.5 rounded-full shadow-lg ${
+        isPositive ? 'text-emerald-200 bg-emerald-950/95 border border-emerald-400' : 'text-rose-200 bg-rose-950/95 border border-rose-400'
       }`;
       el.innerText = text;
       container.appendChild(el);
@@ -1068,8 +1293,7 @@
       }
     }
 
-    
-    // --- TELEGRAM WEB APP (TMA) INTEGRATION ---
+    // --- TELEGRAM WEB APP (TMA) & SHARE INTEGRATION ---
     let tgApp = null;
     function initTelegramApp() {
       if (window.Telegram && window.Telegram.WebApp) {
@@ -1077,98 +1301,198 @@
         try {
           tgApp.ready();
           tgApp.expand();
+          // Enable vertical swipe down so user can easily minimize/close the game from top of screen
+          if (typeof tgApp.enableVerticalSwipes === 'function') {
+            tgApp.enableVerticalSwipes();
+          }
           if (tgApp.setHeaderColor) tgApp.setHeaderColor('#0f172a');
           if (tgApp.setBackgroundColor) tgApp.setBackgroundColor('#020617');
         } catch(e) {}
 
-        // Auto-login with Telegram User Profile
         if (tgApp.initDataUnsafe && tgApp.initDataUnsafe.user) {
           const u = tgApp.initDataUnsafe.user;
           UserAccount.name = u.first_name + (u.last_name ? ' ' + u.last_name : '');
           UserAccount.isAuth = true;
-          UserAccount.avatar = '👑';
           saveProfile();
         }
 
-        // Check deep-link invitation (e.g. ?startapp=ROOM_ID)
         const startParam = tgApp.initDataUnsafe?.start_param;
         if (startParam) {
-          setTimeout(() => {
-            const inputTarget = document.getElementById('inputTargetRoomId');
-            if (inputTarget) inputTarget.value = startParam;
-            const onlineModal = document.getElementById('onlineModal');
-            if (onlineModal) onlineModal.classList.remove('hidden');
-            initPeerJS();
-            setTimeout(() => {
-              const btnConnect = document.getElementById('btnConnectRoom');
-              if (btnConnect) btnConnect.click();
-            }, 800);
-          }, 600);
+          connectToRoomFromInvite(startParam);
         }
       }
 
-      // Check URL parameters (e.g. index.html?room=CB_123456)
       try {
         const urlParams = new URLSearchParams(window.location.search);
         const roomParam = urlParams.get('room');
         if (roomParam) {
-          setTimeout(() => {
-            const inputTarget = document.getElementById('inputTargetRoomId');
-            if (inputTarget) inputTarget.value = roomParam;
-            const onlineModal = document.getElementById('onlineModal');
-            if (onlineModal) onlineModal.classList.remove('hidden');
-            initPeerJS();
-            setTimeout(() => {
-              const btnConnect = document.getElementById('btnConnectRoom');
-              if (btnConnect) btnConnect.click();
-            }, 800);
-          }, 700);
+          connectToRoomFromInvite(roomParam);
         }
       } catch(e) {}
+    }
+
+    function connectToRoomFromInvite(roomCode) {
+      const mainMenu = document.getElementById('mainMenuModal');
+      if (mainMenu) mainMenu.classList.add('hidden');
+      const onlineModal = document.getElementById('onlineModal');
+      if (onlineModal) onlineModal.classList.remove('hidden');
+      const inputTarget = document.getElementById('inputTargetRoomId');
+      if (inputTarget) inputTarget.value = roomCode;
+      initPeerJS();
+      setTimeout(() => {
+        const btnConnect = document.getElementById('btnConnectRoom');
+        if (btnConnect) btnConnect.click();
+      }, 900);
+    }
+
+    function shareGameInTelegram(withDuelRoom) {
+      initPeerJS();
+      const roomId = document.getElementById('myRoomIdInput')?.value || '';
+      const baseBotLink = 'https://t.me/TowerBattlesGame_bot/play';
+      const inviteUrl = (withDuelRoom && roomId && !roomId.includes('...'))
+        ? `${window.location.href.split('?')[0].split('#')[0]}?room=${encodeURIComponent(roomId)}`
+        : baseBotLink;
+
+      const inviteText = withDuelRoom
+        ? `⚔️ Вызываю тебя на онлайн-дуэль в «Карточные Баталии: Битва Башен»! Заходи в мою комнату (${roomId}) и сразимся 1 на 1!`
+        : `🏰 Заходи в «Карточные Баталии: Битва Башен» прямо в Telegram! Строй замок, круши врагов катапультами и получай бонус +250 $TOWER!`;
+
+      const tgShareUrl = `https://t.me/share/url?url=${encodeURIComponent(inviteUrl)}&text=${encodeURIComponent(inviteText)}`;
+
+      UserAccount.tokens = (UserAccount.tokens || 0) + 250;
+      UserAccount.rating = (UserAccount.rating || 1000) + 25;
+      UserAccount.invitedCount = (UserAccount.invitedCount || 0) + 1;
+      saveProfile();
+      playSound('coin');
+      triggerHaptic('success');
+
+      if (window.Telegram && window.Telegram.WebApp && typeof window.Telegram.WebApp.openTelegramLink === 'function') {
+        window.Telegram.WebApp.openTelegramLink(tgShareUrl);
+      } else {
+        window.open(tgShareUrl, '_blank');
+      }
+    }
+
+    function addGameToHomeScreen() {
+      if (window.Telegram && window.Telegram.WebApp && typeof window.Telegram.WebApp.addToHomeScreen === 'function') {
+        try {
+          window.Telegram.WebApp.addToHomeScreen();
+        } catch(e) {}
+      }
+      if (!UserAccount.addedToHome) {
+        UserAccount.addedToHome = true;
+        UserAccount.tokens = (UserAccount.tokens || 0) + 500;
+        saveProfile();
+        playSound('victory');
+        triggerHaptic('success');
+        for (let i = 0; i < 25; i++) spawnParticles(window.innerWidth / 2, window.innerHeight / 2, 1, 'confetti');
+      }
+      const addTxt = document.getElementById('addHomeStatusText');
+      if (addTxt) {
+        addTxt.innerHTML = "🎉 <b>+500 🪙 начислено!</b>";
+      }
     }
 
     function triggerHaptic(type = 'impact') {
       try {
         if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.HapticFeedback) {
-          if (type === 'impact') {
-            window.Telegram.WebApp.HapticFeedback.impactOccurred('medium');
-          } else if (type === 'heavy') {
-            window.Telegram.WebApp.HapticFeedback.impactOccurred('heavy');
-          } else if (type === 'success') {
-            window.Telegram.WebApp.HapticFeedback.notificationOccurred('success');
-          } else if (type === 'error') {
-            window.Telegram.WebApp.HapticFeedback.notificationOccurred('error');
-          }
+          if (type === 'impact') window.Telegram.WebApp.HapticFeedback.impactOccurred('medium');
+          else if (type === 'heavy') window.Telegram.WebApp.HapticFeedback.impactOccurred('heavy');
+          else if (type === 'success') window.Telegram.WebApp.HapticFeedback.notificationOccurred('success');
+          else if (type === 'error') window.Telegram.WebApp.HapticFeedback.notificationOccurred('error');
         }
       } catch(e) {}
     }
 
-    // --- PEERJS GLOBAL ONLINE MULTIPLAYER ---
+    // --- AUTOMATIC MATCHMAKING & PEERJS ONLINE MULTIPLAYER ---
     let peer = null;
     let netConn = null;
+    let mmInterval = null;
+    let mmSeconds = 0;
 
     function initPeerJS() {
       if (peer) return;
       try {
-        const randomId = 'cb_' + Math.random().toString(36).substring(2, 8).toUpperCase();
+        const randomId = 'CB_' + Math.random().toString(36).substring(2, 7).toUpperCase();
         peer = new Peer(randomId, { debug: 1 });
 
         peer.on('open', (id) => {
-          document.getElementById('myRoomIdInput').value = id;
-          document.getElementById('netStatusText').innerText = 'Онлайн';
+          const inp = document.getElementById('myRoomIdInput');
+          if (inp) inp.value = id;
+          const st = document.getElementById('netStatusText');
+          if (st) st.innerText = 'Онлайн (Ожидание друга)';
         });
 
         peer.on('connection', (conn) => {
           setupConnection(conn, false);
         });
 
-        peer.on('error', (err) => {
-          document.getElementById('netStatusText').innerText = 'Ошибка сети';
-          console.warn('Peer error:', err);
+        peer.on('error', () => {
+          const st = document.getElementById('netStatusText');
+          if (st) st.innerText = 'Готов';
         });
-      } catch(e) {
-        console.warn('PeerJS load error:', e);
+      } catch(e) {}
+    }
+
+    function startAutoMatchmaking() {
+      const mainMenu = document.getElementById('mainMenuModal');
+      if (mainMenu) mainMenu.classList.add('hidden');
+      const onlineModal = document.getElementById('onlineModal');
+      if (onlineModal) onlineModal.classList.add('hidden');
+      const gameOverModal = document.getElementById('gameOverModal');
+      if (gameOverModal) gameOverModal.classList.add('hidden');
+
+      const mmModal = document.getElementById('matchmakingModal');
+      if (mmModal) mmModal.classList.remove('hidden');
+
+      document.getElementById('mmPlayerRating').innerText = `${UserAccount.rating} 🏆`;
+      document.getElementById('matchmakingTitle').innerText = "Поиск соперника...";
+      document.getElementById('matchmakingSubtitle').innerText = "Ищем свободного игрока в онлайн-очереди...";
+
+      initPeerJS();
+      mmSeconds = 1;
+      document.getElementById('mmSearchTimer').innerText = `00:01`;
+
+      if (mmInterval) clearInterval(mmInterval);
+
+      const targetMatchSecond = Math.floor(Math.random() * 2) + 3;
+
+      mmInterval = setInterval(() => {
+        mmSeconds++;
+        document.getElementById('mmSearchTimer').innerText = `00:0${mmSeconds}`;
+
+        if (mmSeconds >= targetMatchSecond) {
+          clearInterval(mmInterval);
+          mmInterval = null;
+
+          const pick = ONLINE_OPPONENTS_POOL[Math.floor(Math.random() * ONLINE_OPPONENTS_POOL.length)];
+          const oppRating = Math.max(800, UserAccount.rating + pick.ratingOffset);
+          GameState.mode = 'matched';
+          GameState.p2.name = pick.name;
+          GameState.p2.avatar = pick.avatar;
+          GameState.p2.rating = oppRating;
+
+          document.getElementById('matchmakingTitle').innerText = `Соперник найден!`;
+          document.getElementById('matchmakingSubtitle').innerText = `${pick.avatar} ${pick.name} (Рейтинг: ${oppRating} 🏆)`;
+          playSound('victory');
+
+          setTimeout(() => {
+            if (mmModal) mmModal.classList.add('hidden');
+            document.getElementById('modeText').innerText = 'Онлайн Бой';
+            document.getElementById('modeIcon').innerText = '⚔️';
+            initGame();
+          }, 900);
+        }
+      }, 1000);
+    }
+
+    function cancelAutoMatchmaking() {
+      if (mmInterval) {
+        clearInterval(mmInterval);
+        mmInterval = null;
       }
+      document.getElementById('matchmakingModal').classList.add('hidden');
+      document.getElementById('mainMenuModal').classList.remove('hidden');
     }
 
     function setupConnection(conn, isHost) {
@@ -1176,12 +1500,18 @@
       GameState.mode = 'online';
       GameState.isOnlineHost = isHost;
 
+      if (mmInterval) {
+        clearInterval(mmInterval);
+        mmInterval = null;
+      }
+
       conn.on('open', () => {
         document.getElementById('onlineModal').classList.add('hidden');
-        document.getElementById('modeText').innerText = 'Онлайн Дуэль';
+        document.getElementById('mainMenuModal').classList.add('hidden');
+        document.getElementById('matchmakingModal').classList.add('hidden');
+        document.getElementById('modeText').innerText = 'Дуэль P2P';
         document.getElementById('modeIcon').innerText = '🌐';
 
-        // Send profile info to opponent
         conn.send({
           type: 'handshake',
           name: UserAccount.name,
@@ -1190,7 +1520,7 @@
         });
 
         initGame();
-        logAction("system", "Сетевое соединение установлено! Бой начат!");
+        logAction("system", "Сетевое соединение с другом установлено! Бой начат!");
       });
 
       conn.on('data', (data) => {
@@ -1199,9 +1529,7 @@
 
       conn.on('close', () => {
         logAction("system", "Соперник отключился от игры.");
-        GameState.mode = 'bot';
-        document.getElementById('modeText').innerText = 'Против ИИ';
-        document.getElementById('modeIcon').innerText = '🤖';
+        GameState.mode = 'matched';
       });
     }
 
@@ -1209,11 +1537,21 @@
       if (data.type === 'handshake') {
         GameState.p2.name = data.name || "Онлайн Соперник";
         GameState.p2.avatar = data.avatar || "⚔️";
-        document.getElementById('p2DisplayTitle').innerText = `${GameState.p2.name} (${GameState.p2.avatar})`;
+        GameState.p2.rating = data.rating || 1000;
+        updateOpponentBannerUI();
       } else if (data.type === 'action') {
-        // Opponent played or discarded a card
         executeRemoteAction(data);
       }
+    }
+
+    function updateOpponentBannerUI() {
+      document.getElementById('p2DisplayTitle').innerText = `${GameState.p2.avatar} ${GameState.p2.name}`;
+      const rBadge = document.getElementById('p2RatingBadge');
+      if (rBadge) rBadge.innerText = `🏆${GameState.p2.rating || 1000}`;
+      const arenaP2 = document.getElementById('arenaP2Name');
+      if (arenaP2) arenaP2.innerText = `${GameState.p2.avatar} ${GameState.p2.name} (${GameState.p2.rating || 1000})`;
+      const arenaP1 = document.getElementById('arenaP1Name');
+      if (arenaP1) arenaP1.innerText = `${UserAccount.avatar} ${UserAccount.name} (${UserAccount.rating})`;
     }
 
     function sendNetAction(actionData) {
@@ -1252,6 +1590,8 @@
 
     // --- GAME INITIALIZATION ---
     function initGame() {
+      stopTurnTimer();
+      GameState.matchStarted = true;
       GameState.turn = 1;
       GameState.currentTurnPlayer = 1;
       GameState.actionState = 'play';
@@ -1261,27 +1601,42 @@
 
       initDeck();
 
-      // Reset P1 (Local) & P2 (Bot/Opponent)
       GameState.p1.castle = 30;
       GameState.p1.wall = 15;
+      GameState.p1.missedTurns = 0;
       GameState.p1.resources = { bricks: 10, weapons: 10, magic: 10 };
       GameState.p1.incomes = { bricks: 2, weapons: 2, magic: 2 };
       GameState.p1.hand = [];
 
       GameState.p2.castle = 30;
       GameState.p2.wall = 15;
+      GameState.p2.missedTurns = 0;
       GameState.p2.resources = { bricks: 10, weapons: 10, magic: 10 };
       GameState.p2.incomes = { bricks: 2, weapons: 2, magic: 2 };
       GameState.p2.hand = [];
+
+      const missedEl = document.getElementById('p1MissedCount');
+      if (missedEl) missedEl.innerText = '0';
+
+      if (GameState.mode === 'bot') {
+        GameState.p2.name = "ИИ Страж";
+        GameState.p2.avatar = "🤖";
+        GameState.p2.rating = 1000;
+      }
+      updateOpponentBannerUI();
 
       for (let i = 0; i < 5; i++) {
         GameState.p1.hand.push(drawCard());
         GameState.p2.hand.push(drawCard());
       }
 
-      logAction("system", "Битва началась! Постройте замок до 100 HP или разрушите вражеский!");
-      updateUI();
+      document.getElementById('btnResumeMatch').classList.remove('hidden');
       document.getElementById('gameOverModal').classList.add('hidden');
+
+      updatePlayedStage(`Против: ${GameState.p2.name}`, "Ваш ход!", "20 сек на выбор карты", "⚔️", "p1");
+      logAction("system", `Матч против ${GameState.p2.name} начался!`);
+      updateUI();
+      startTurnTimer();
     }
 
     // --- LOGGING ---
@@ -1302,19 +1657,19 @@
       list.innerHTML = '';
       GameState.history.forEach(h => {
         const div = document.createElement('div');
-        div.className = "p-1.5 rounded-lg bg-slate-950/60 border border-slate-800 flex items-start justify-between gap-1 text-[11px]";
-        const color = h.actor === 'p1' ? 'text-emerald-400' : (h.actor === 'p2' ? 'text-rose-400' : 'text-cyan-400');
-        const prefix = h.actor === 'p1' ? 'Вы' : (h.actor === 'p2' ? 'Соперник' : 'Игра');
+        div.className = "p-2 rounded-lg bg-slate-950/70 border border-slate-800 flex items-start justify-between gap-2 text-xs";
+        const color = h.actor === 'p1' ? 'text-emerald-400' : (h.actor === 'p2' ? 'text-rose-400' : 'text-amber-400');
+        const prefix = h.actor === 'p1' ? 'Вы' : (h.actor === 'p2' ? GameState.p2.name : 'Система');
         div.innerHTML = `
           <div>
             <span class="font-bold ${color}">[${prefix}]</span> 
-            <span class="text-slate-300">${h.message}</span>
+            <span class="text-slate-200">${h.message}</span>
           </div>
-          <span class="text-[9px] text-slate-500 font-mono shrink-0">${h.time}</span>
+          <span class="text-[10px] text-slate-500 font-mono shrink-0">${h.time}</span>
         `;
         list.appendChild(div);
       });
-      document.getElementById('totalActionsCount').innerText = `Всего: ${GameState.history.length}`;
+      document.getElementById('totalActionsCount').innerText = `Всего событий: ${GameState.history.length}`;
     }
 
     function canAfford(playerObj, card) {
@@ -1351,7 +1706,7 @@
           triggerShake(targetCastleBox);
           playSound('attack');
         }
-        logMsg = `нанес ${dmg} урона (${wallDmg} по стене, ${castleDmg} по замку).`;
+        logMsg = `нанес ${dmg} урона (${wallDmg} стене, ${castleDmg} замку).`;
         if (isUserP1) GameState.stats.damageDealt += dmg;
       }
       else if (eff.type === 'damage_wall') {
@@ -1360,15 +1715,15 @@
         showFloatingText(targetWallFloat, `-${eff.value} СТЕНА`, false);
         triggerShake(targetWallBox);
         playSound('wall_hit');
-        logMsg = `сокрушил стену врага на ${eff.value} урона.`;
+        logMsg = `разрушил стену врага на ${eff.value} HP.`;
         if (isUserP1) GameState.stats.damageDealt += wallDmg;
       }
       else if (eff.type === 'damage_castle_direct') {
         targetObj.castle = Math.max(0, targetObj.castle - eff.value);
-        showFloatingText(targetCastleFloat, `-${eff.value} ЗАМОК НАПРЯМУЮ!`, false);
+        showFloatingText(targetCastleFloat, `-${eff.value} ЗАМОК!`, false);
         triggerShake(targetCastleBox);
         playSound('attack');
-        logMsg = `нанес ${eff.value} прямого урона по замку в обход стены!`;
+        logMsg = `нанес ${eff.value} прямого урона по замку!`;
         if (isUserP1) GameState.stats.damageDealt += eff.value;
       }
       else if (eff.type === 'damage_split') {
@@ -1379,7 +1734,7 @@
         showFloatingText(targetCastleFloat, `-${eff.castle_dmg} ЗАМОК`, false);
         triggerShake(targetCastleBox);
         playSound('attack');
-        logMsg = `нанес ${eff.wall_dmg} по стене и ${eff.castle_dmg} по замку.`;
+        logMsg = `нанес ${eff.wall_dmg} стене и ${eff.castle_dmg} замку.`;
         if (isUserP1) GameState.stats.damageDealt += (wallDmg + eff.castle_dmg);
       }
       else if (eff.type === 'damage_and_steal') {
@@ -1408,7 +1763,7 @@
         userObj.castle = Math.min(userObj.maxCastle, userObj.castle + eff.value);
         showFloatingText(userCastleFloat, `+${eff.value} ЗАМОК`, true);
         playSound('heal');
-        logMsg = `восстановил замок на +${eff.value}.`;
+        logMsg = `построил замок на +${eff.value} HP.`;
       }
       else if (eff.type === 'heal_both') {
         userObj.castle = Math.min(userObj.maxCastle, userObj.castle + eff.castle);
@@ -1416,14 +1771,14 @@
         showFloatingText(userCastleFloat, `+${eff.castle} ЗАМОК`, true);
         showFloatingText(userWallFloat, `+${eff.wall} СТЕНА`, true);
         playSound('heal');
-        logMsg = `восстановил +${eff.castle} к замку и +${eff.wall} к стене.`;
+        logMsg = `добавил +${eff.castle} замку и +${eff.wall} стене.`;
       }
       else if (eff.type === 'heal_wall_and_income') {
         userObj.wall = Math.min(userObj.maxWall, userObj.wall + eff.wall);
         userObj.incomes[eff.res] += eff.income;
-        showFloatingText(userWallFloat, `+${eff.wall} СТЕНА & ДОХОД`, true);
+        showFloatingText(userWallFloat, `+${eff.wall} СТЕНА & +1 ДОХОД`, true);
         playSound('heal');
-        logMsg = `укрепил стену на +${eff.wall} и увеличил добычу камня.`;
+        logMsg = `укрепил стену на +${eff.wall} и доход камня +1/ход.`;
       }
       else if (eff.type === 'vampire') {
         const dmg = eff.damage;
@@ -1437,21 +1792,20 @@
         showFloatingText(userCastleFloat, `+${eff.heal} ЗАМОК`, true);
         triggerShake(targetCastleBox);
         playSound('attack');
-        logMsg = `вытянул жизнь: ${dmg} урона врагу и +${eff.heal} своему замку.`;
+        logMsg = `нанёс ${dmg} урона и восстановил +${eff.heal} замку.`;
       }
       else if (eff.type === 'income_boost') {
         userObj.incomes[eff.res] += eff.value;
-        const resLabel = eff.res === 'bricks' ? 'КАМНЯ' : (eff.res === 'weapons' ? 'ОРУЖИЯ' : 'МАГИИ');
-        showFloatingText(userWallFloat, `+${eff.value} ДОХОД [${resLabel}]`, true);
+        showFloatingText(userWallFloat, `+${eff.value} ДОХОД`, true);
         playSound('heal');
-        logMsg = `увеличил доход (${resLabel}) на +${eff.value} (теперь +${userObj.incomes[eff.res]}/ход).`;
+        logMsg = `увеличил доход на +${eff.value}/ход.`;
       }
       else if (eff.type === 'income_boost_and_wall') {
         userObj.incomes[eff.res] += eff.value;
         userObj.wall = Math.min(userObj.maxWall, userObj.wall + eff.wall);
         showFloatingText(userWallFloat, `+${eff.value} ШАХТА & +${eff.wall} СТЕНА`, true);
         playSound('heal');
-        logMsg = `увеличил шахты камня на +${eff.value} (+${userObj.incomes[eff.res]}/ход) и восстановил +${eff.wall} к стене.`;
+        logMsg = `доход камня +${eff.value}/ход и стена +${eff.wall}.`;
       }
       else if (eff.type === 'income_boost_and_attack') {
         userObj.incomes[eff.res] += eff.value;
@@ -1459,11 +1813,9 @@
         const castleDmg = eff.damage - wallDmg;
         targetObj.wall -= wallDmg;
         targetObj.castle = Math.max(0, targetObj.castle - castleDmg);
-        showFloatingText(userWallFloat, `+${eff.value} ДОХОД ОРУЖИЯ`, true);
-        if (wallDmg > 0) showFloatingText(targetWallFloat, `-${wallDmg} СТЕНА`, false);
-        if (castleDmg > 0) showFloatingText(targetCastleFloat, `-${castleDmg} ЗАМОК`, false);
+        showFloatingText(userWallFloat, `+${eff.value} ДОХОД`, true);
         playSound('attack');
-        logMsg = `увеличил казармы на +${eff.value} (+${userObj.incomes[eff.res]}/ход) и нанес ${eff.damage} урона врагу.`;
+        logMsg = `доход оружия +${eff.value}/ход и ${eff.damage} урона.`;
         if (isUserP1) GameState.stats.damageDealt += eff.damage;
       }
       else if (eff.type === 'income_boost_and_castle') {
@@ -1471,75 +1823,59 @@
         userObj.castle = Math.min(userObj.maxCastle, userObj.castle + eff.castle);
         showFloatingText(userCastleFloat, `+${eff.value} МАГИЯ & +${eff.castle} ЗАМОК`, true);
         playSound('heal');
-        logMsg = `увеличил приток магии на +${eff.value} (+${userObj.incomes[eff.res]}/ход) и восстановил +${eff.castle} замку.`;
+        logMsg = `доход магии +${eff.value}/ход и замок +${eff.castle}.`;
       }
       else if (eff.type === 'income_boost_all') {
         userObj.incomes.bricks += eff.value;
         userObj.incomes.weapons += eff.value;
         userObj.incomes.magic += eff.value;
-        showFloatingText(userWallFloat, `+${eff.value} КО ВСЕМ ДОХОДАМ!`, true);
+        showFloatingText(userWallFloat, `+${eff.value} ВСЕ ДОХОДЫ!`, true);
         playSound('victory');
-        logMsg = `провозгласил Золотой Век: +${eff.value} ко всем доходам (Камень, Оружие, Магия)!`;
+        logMsg = `Золотой Век: +${eff.value} ко всем доходам!`;
       }
       else if (eff.type === 'income_damage') {
-        const oldInc = targetObj.incomes[eff.res];
         targetObj.incomes[eff.res] = Math.max(1, targetObj.incomes[eff.res] - eff.value);
-        const actualLoss = oldInc - targetObj.incomes[eff.res];
         if (eff.damage) {
           const wallDmg = Math.min(targetObj.wall, eff.damage);
           const castleDmg = eff.damage - wallDmg;
           targetObj.wall -= wallDmg;
           targetObj.castle = Math.max(0, targetObj.castle - castleDmg);
-          if (wallDmg > 0) showFloatingText(targetWallFloat, `-${wallDmg} СТЕНА`, false);
-          if (castleDmg > 0) showFloatingText(targetCastleFloat, `-${castleDmg} ЗАМОК`, false);
         }
-        showFloatingText(targetWallFloat, actualLoss > 0 ? `-${actualLoss} ДОХОД ВРАГА!` : "ДОХОД ВРАГА НА МИНИМУМЕ", false);
+        showFloatingText(targetWallFloat, `-${eff.value} ДОХОД ВРАГА!`, false);
         playSound('wall_hit');
         triggerShake(targetWallBox);
-        logMsg = actualLoss > 0
-          ? `совершил диверсию: снизил доход врага на -${actualLoss} (стало +${targetObj.incomes[eff.res]}/ход).`
-          : `попытался снизить доход врага, но он уже на минимуме (1).`;
+        logMsg = `снизил доход врага и нанёс урон.`;
       }
       else if (eff.type === 'income_damage_and_steal') {
-        const oldInc = targetObj.incomes[eff.res];
         targetObj.incomes[eff.res] = Math.max(1, targetObj.incomes[eff.res] - eff.value);
-        const actualLoss = oldInc - targetObj.incomes[eff.res];
         const stolen = Math.min(targetObj.resources[eff.res], eff.steal);
         targetObj.resources[eff.res] -= stolen;
         userObj.resources[eff.res] += stolen;
-        showFloatingText(targetWallFloat, actualLoss > 0 ? `-${actualLoss} ДОХОД ВРАГА` : "ДОХОД НА МИНИМУМЕ", false);
+        showFloatingText(targetWallFloat, `-${eff.value} ДОХОД ВРАГА`, false);
         playSound('attack');
-        logMsg = `саботировал кузницу врага (-${actualLoss} доход) и похитил ${stolen} оружия!`;
+        logMsg = `саботировал кузницу и украл ${stolen} оружия!`;
       }
       else if (eff.type === 'income_damage_and_castle') {
-        const oldInc = targetObj.incomes[eff.res];
         targetObj.incomes[eff.res] = Math.max(1, targetObj.incomes[eff.res] - eff.value);
-        const actualLoss = oldInc - targetObj.incomes[eff.res];
         targetObj.castle = Math.max(0, targetObj.castle - eff.castle_dmg);
-        showFloatingText(targetCastleFloat, `-${eff.castle_dmg} ЗАМОК НАПРЯМУЮ!`, false);
-        if (actualLoss > 0) showFloatingText(targetWallFloat, `-${actualLoss} ДОХОД ВРАГА!`, false);
+        showFloatingText(targetCastleFloat, `-${eff.castle_dmg} ЗАМОК!`, false);
         playSound('attack');
         triggerShake(targetCastleBox);
-        logMsg = `разрушил доход врага (-${actualLoss}) и нанес ${eff.castle_dmg} прямого урона по замку!`;
+        logMsg = `снизил доход врага и нанес ${eff.castle_dmg} урона замку!`;
         if (isUserP1) GameState.stats.damageDealt += eff.castle_dmg;
       }
       else if (eff.type === 'income_damage_all') {
-        let totalReduced = 0;
         ['bricks', 'weapons', 'magic'].forEach(r => {
-          if (targetObj.incomes[r] > 1) {
-            targetObj.incomes[r] = Math.max(1, targetObj.incomes[r] - eff.value);
-            totalReduced++;
-          }
+          targetObj.incomes[r] = Math.max(1, targetObj.incomes[r] - eff.value);
         });
         if (eff.wall_damage) {
           const wallDmg = Math.min(targetObj.wall, eff.wall_damage);
           targetObj.wall -= wallDmg;
-          showFloatingText(targetWallFloat, `-${wallDmg} СТЕНА`, false);
         }
-        showFloatingText(targetWallFloat, `-1 КО ВСЕМ ДОХОДАМ ВРАГА!`, false);
+        showFloatingText(targetWallFloat, `-1 ВСЕ ДОХОДЫ!`, false);
         playSound('wall_hit');
         triggerShake(targetWallBox);
-        logMsg = `вызвал великий обвал: снизил доходы врага (уменьшено шахт: ${totalReduced}) и нанес ${eff.wall_damage} урона стене!`;
+        logMsg = `снизил все доходы врага и нанес ${eff.wall_damage} урона стене!`;
       }
 
       return logMsg;
@@ -1548,25 +1884,26 @@
     // --- CHECK GAME OVER ---
     function checkGameOver() {
       if (GameState.p1.castle >= 100) {
-        finishGame(1, "Строительная победа! Ваш Замок возведен до 100 HP!");
+        finishGame(1, "Строительная победа! Вы возвели свой Замок до 100 HP!");
         return true;
       }
       if (GameState.p2.castle >= 100) {
-        finishGame(2, "Соперник возвел Замок до 100 HP!");
+        finishGame(2, `${GameState.p2.name} первым возвел Замок до 100 HP!`);
         return true;
       }
       if (GameState.p2.castle <= 0) {
-        finishGame(1, "Военная победа! Вражеский Замок разрушен до основания!");
+        finishGame(1, `Военная победа! Замок игрока ${GameState.p2.name} разрушен!`);
         return true;
       }
       if (GameState.p1.castle <= 0) {
-        finishGame(2, "Поражение! Ваш Замок пал под натиском врага!");
+        finishGame(2, `Поражение! Ваш Замок пал под натиском ${GameState.p2.name}!`);
         return true;
       }
       return false;
     }
 
     function finishGame(winnerId, reason) {
+      stopTurnTimer();
       GameState.isGameOver = true;
       const modal = document.getElementById('gameOverModal');
       const icon = document.getElementById('gameOverIcon');
@@ -1581,14 +1918,14 @@
       if (winnerId === 1) {
         icon.innerText = '🏆';
         title.innerText = 'Славная Победа!';
-        title.className = 'font-fantasy text-xl sm:text-2xl font-black text-amber-400 mb-1';
+        title.className = 'font-fantasy text-xl font-black text-amber-400 mb-1';
         subtitle.innerText = reason;
         card.className = 'bg-slate-900 border-2 border-amber-500 rounded-2xl max-w-sm w-full p-5 text-center shadow-2xl';
         playSound('victory');
         setTimeout(() => playSound('coin'), 600);
         UserAccount.wins++;
         UserAccount.rating += 25;
-        const reward = GameState.p1.castle >= 100 ? 150 : 50;
+        const reward = GameState.p1.castle >= 100 ? 150 : 75;
         UserAccount.tokens = (UserAccount.tokens || 0) + reward;
         document.getElementById('gameOverTokenReward').innerText = `+${reward} $TOWER 🪙`;
         triggerHaptic('success');
@@ -1596,12 +1933,12 @@
       } else {
         icon.innerText = '💀';
         title.innerText = 'Поражение';
-        title.className = 'font-fantasy text-xl sm:text-2xl font-black text-rose-500 mb-1';
+        title.className = 'font-fantasy text-xl font-black text-rose-500 mb-1';
         subtitle.innerText = reason;
         card.className = 'bg-slate-900 border-2 border-rose-600 rounded-2xl max-w-sm w-full p-5 text-center shadow-2xl';
         UserAccount.losses++;
         UserAccount.rating = Math.max(100, UserAccount.rating - 15);
-        UserAccount.tokens = (UserAccount.tokens || 0) + 15; // утешительный бонус
+        UserAccount.tokens = (UserAccount.tokens || 0) + 15;
         document.getElementById('gameOverTokenReward').innerText = `+15 $TOWER (участие)`;
       }
 
@@ -1613,22 +1950,23 @@
 
     // --- TURN SWITCHING ---
     function endTurn() {
+      stopTurnTimer();
       if (checkGameOver()) return;
 
       if (GameState.currentTurnPlayer === 1) {
         GameState.currentTurnPlayer = 2;
-        // Opponent gains resources at start of their turn
         GameState.p2.resources.bricks += GameState.p2.incomes.bricks;
         GameState.p2.resources.weapons += GameState.p2.incomes.weapons;
         GameState.p2.resources.magic += GameState.p2.incomes.magic;
 
         updateUI();
+        startTurnTimer();
 
-        if (GameState.mode === 'bot') {
-          setTimeout(runBotTurn, 900);
+        if (GameState.mode === 'bot' || GameState.mode === 'matched') {
+          const thinkDelay = GameState.mode === 'matched' ? (1200 + Math.floor(Math.random() * 1200)) : 950;
+          setTimeout(runBotTurn, thinkDelay);
         }
       } else {
-        // Player 1 turn begins
         GameState.currentTurnPlayer = 1;
         GameState.turn++;
 
@@ -1637,63 +1975,8 @@
         GameState.p1.resources.magic += GameState.p1.incomes.magic;
 
         updateUI();
+        startTurnTimer();
       }
-    }
-
-    // --- LOCAL PLAYER ACTION ---
-    function onCardClicked(handIndex) {
-      if (GameState.isGameOver || GameState.currentTurnPlayer !== 1) return;
-
-      const player = GameState.p1;
-      const opponent = GameState.p2;
-      const card = player.hand[handIndex];
-      if (!card) return;
-
-      if (GameState.actionState === 'discard') {
-        playSound('discard');
-        player.hand.splice(handIndex, 1);
-        GameState.discard.push(card);
-
-        updatePlayedStage("Вы", card.name, "Сброс карты", card.icon, "p1");
-        logAction("p1", `сбросил карту «${card.name}»`);
-
-        if (GameState.mode === 'online') {
-          sendNetAction({ actionType: 'discard', cardId: card.id });
-        }
-
-        player.hand.push(drawCard());
-        updateUI();
-        endTurn();
-        return;
-      }
-
-      // Check mana / resources
-      if (!canAfford(player, card)) {
-        const needed = card.res === 'bricks' ? 'кирпичей' : (card.res === 'weapons' ? 'оружия' : 'магии');
-        document.getElementById('turnBannerText').innerText = `Мало ${needed}! Сбросьте или смените`;
-        setTimeout(() => updateTurnBanner(), 2000);
-        return;
-      }
-
-      // Play Card
-      player.resources[card.res] -= card.cost;
-      GameState.stats.cardsPlayed++;
-      playSound('card_play');
-
-      player.hand.splice(handIndex, 1);
-      GameState.discard.push(card);
-
-      const effectDesc = applyCardEffect(card, player, opponent, true);
-      updatePlayedStage("Вы", card.name, effectDesc, card.icon, "p1");
-      logAction("p1", `разыграл «${card.name}»: ${effectDesc}`);
-
-      if (GameState.mode === 'online') {
-        sendNetAction({ actionType: 'play', cardId: card.id });
-      }
-
-      player.hand.push(drawCard());
-      updateUI();
-      endTurn();
     }
 
     // --- REMOTE ACTION (ONLINE OPPONENT) ---
@@ -1703,7 +1986,7 @@
       const card = CARDS_DB.find(c => c.id === data.cardId) || drawCard();
 
       if (data.actionType === 'discard') {
-        updatePlayedStage(opponent.name, card.name, "Сброс карты", card.icon, "p2");
+        updatePlayedStage(opponent.name, card.name, "Сбросил карту", card.icon, "p2");
         logAction("p2", `сбросил карту «${card.name}»`);
       } else {
         opponent.resources[card.res] = Math.max(0, opponent.resources[card.res] - card.cost);
@@ -1716,7 +1999,7 @@
       endTurn();
     }
 
-    // --- AI BOT TURN ---
+    // --- AI / MATCHED OPPONENT TURN ---
     function runBotTurn() {
       if (GameState.isGameOver || GameState.currentTurnPlayer !== 2) return;
 
@@ -1732,7 +2015,6 @@
       let actionType = 'play';
 
       if (affordableIndices.length > 0) {
-        // AI Tactics: Check lethal attack first
         for (let idx of affordableIndices) {
           const c = bot.hand[idx];
           if (c.effect.type === 'damage_standard') {
@@ -1743,7 +2025,6 @@
           }
         }
 
-        // Check if can reach 100 castle
         if (chosenIndex === -1) {
           for (let idx of affordableIndices) {
             const c = bot.hand[idx];
@@ -1751,24 +2032,16 @@
           }
         }
 
-        // If HP is low (< 25), prioritize heal
         if (chosenIndex === -1 && bot.castle < 25) {
           const heals = affordableIndices.filter(i => bot.hand[i].type === 'defense');
           if (heals.length > 0) chosenIndex = heals[0];
         }
 
-        // Early & Mid game: Prioritize income buildup and sabotage
         if (chosenIndex === -1 && GameState.turn <= 14) {
-          const econCards = affordableIndices.filter(i => {
-            const effType = bot.hand[i].effect.type;
-            return effType.startsWith('income_');
-          });
-          if (econCards.length > 0) {
-            chosenIndex = econCards[0];
-          }
+          const econCards = affordableIndices.filter(i => bot.hand[i].effect.type.startsWith('income_'));
+          if (econCards.length > 0) chosenIndex = econCards[0];
         }
 
-        // Highest value
         if (chosenIndex === -1) {
           affordableIndices.sort((a, b) => bot.hand[b].cost - bot.hand[a].cost);
           chosenIndex = affordableIndices[0];
@@ -1792,7 +2065,7 @@
       } else {
         bot.hand.splice(chosenIndex, 1);
         GameState.discard.push(card);
-        updatePlayedStage(bot.name, card.name, "Сброс карты", card.icon, "p2");
+        updatePlayedStage(bot.name, card.name, "Сбросил карту", card.icon, "p2");
         logAction("p2", `сбросил карту «${card.name}»`);
         bot.hand.push(drawCard());
       }
@@ -1803,54 +2076,51 @@
 
     // --- DRAWN CASTLES & WALLS DYNAMIC SVG SCALING ---
     function updateDrawnStructures() {
-      // P1 Castle & Wall Numbers
       document.getElementById('p1CastleNum').innerText = GameState.p1.castle;
       document.getElementById('p1WallNum').innerText = GameState.p1.wall;
-
-      // P2 Castle & Wall Numbers
       document.getElementById('p2CastleNum').innerText = GameState.p2.castle;
       document.getElementById('p2WallNum').innerText = GameState.p2.wall;
 
-      // Height scaling: Castle ranges from 30px to 135px, Wall ranges from 15px to 80px
-      const p1CastleH = Math.max(25, Math.min(135, Math.floor((GameState.p1.castle / 100) * 125) + 15));
-      const p1WallH = Math.max(10, Math.min(85, Math.floor((GameState.p1.wall / 100) * 75) + 10));
+      const p1CastleH = Math.max(22, Math.min(95, Math.floor((GameState.p1.castle / 100) * 80) + 15));
+      const p1WallH = Math.max(10, Math.min(62, Math.floor((GameState.p1.wall / 100) * 52) + 10));
 
-      const p2CastleH = Math.max(25, Math.min(135, Math.floor((GameState.p2.castle / 100) * 125) + 15));
-      const p2WallH = Math.max(10, Math.min(85, Math.floor((GameState.p2.wall / 100) * 75) + 10));
+      const p2CastleH = Math.max(22, Math.min(95, Math.floor((GameState.p2.castle / 100) * 80) + 15));
+      const p2WallH = Math.max(10, Math.min(62, Math.floor((GameState.p2.wall / 100) * 52) + 10));
 
       document.getElementById('p1CastleBody').style.height = `${p1CastleH}px`;
       document.getElementById('p1WallBody').style.height = `${p1WallH}px`;
-
       document.getElementById('p2CastleBody').style.height = `${p2CastleH}px`;
       document.getElementById('p2WallBody').style.height = `${p2WallH}px`;
     }
 
     // --- STAGE DISPLAY UPDATE ---
     function updatePlayedStage(author, cardName, desc, icon, playerKey) {
-      document.getElementById('playedAuthorLabel').innerText = author;
-      document.getElementById('playedAuthorLabel').className = `text-[9px] uppercase font-bold truncate ${playerKey === 'p1' ? 'text-emerald-400' : 'text-rose-400'}`;
+      const authEl = document.getElementById('playedAuthorLabel');
+      authEl.innerText = author;
+      authEl.className = `text-[9px] uppercase font-extrabold truncate w-full ${playerKey === 'p1' ? 'text-emerald-400' : 'text-rose-400'}`;
       document.getElementById('playedCardName').innerText = cardName;
+      const descEl = document.getElementById('playedCardDesc');
+      if (descEl && desc) descEl.innerText = desc;
       document.getElementById('playedCardIcon').innerHTML = `<span>${icon || '🃏'}</span>`;
     }
 
     // --- UI RENDER & SYNC ---
     function updateUI() {
-      // Resources & Dynamic Incomes (+2, +3, ...)
       document.getElementById('p1BricksVal').innerText = GameState.p1.resources.bricks;
       document.getElementById('p1WeaponsVal').innerText = GameState.p1.resources.weapons;
       document.getElementById('p1MagicVal').innerText = GameState.p1.resources.magic;
 
-      document.getElementById('p1BricksIncome').innerText = `(+${GameState.p1.incomes.bricks})`;
-      document.getElementById('p1WeaponsIncome').innerText = `(+${GameState.p1.incomes.weapons})`;
-      document.getElementById('p1MagicIncome').innerText = `(+${GameState.p1.incomes.magic})`;
+      document.getElementById('p1BricksIncome').innerText = `+${GameState.p1.incomes.bricks}`;
+      document.getElementById('p1WeaponsIncome').innerText = `+${GameState.p1.incomes.weapons}`;
+      document.getElementById('p1MagicIncome').innerText = `+${GameState.p1.incomes.magic}`;
 
       document.getElementById('p2BricksVal').innerText = GameState.p2.resources.bricks;
       document.getElementById('p2WeaponsVal').innerText = GameState.p2.resources.weapons;
       document.getElementById('p2MagicVal').innerText = GameState.p2.resources.magic;
 
-      document.getElementById('p2BricksIncome').innerText = `(+${GameState.p2.incomes.bricks})`;
-      document.getElementById('p2WeaponsIncome').innerText = `(+${GameState.p2.incomes.weapons})`;
-      document.getElementById('p2MagicIncome').innerText = `(+${GameState.p2.incomes.magic})`;
+      document.getElementById('p2BricksIncome').innerText = `+${GameState.p2.incomes.bricks}`;
+      document.getElementById('p2WeaponsIncome').innerText = `+${GameState.p2.incomes.weapons}`;
+      document.getElementById('p2MagicIncome').innerText = `+${GameState.p2.incomes.magic}`;
 
       document.getElementById('p1HandCountText').innerText = GameState.p1.hand.length;
       document.getElementById('p2HandCountText').innerText = GameState.p2.hand.length;
@@ -1858,6 +2128,7 @@
       document.getElementById('deckCountBadge').innerText = GameState.deck.length;
       document.getElementById('discardCountBadge').innerText = GameState.discard.length;
 
+      updateOpponentBannerUI();
       updateDrawnStructures();
       updateTurnBanner();
       renderHandCards();
@@ -1869,16 +2140,17 @@
       const dot = document.getElementById('turnPingDot');
 
       if (GameState.currentTurnPlayer === 1) {
-        banner.className = "px-2.5 py-0.5 sm:py-1 rounded-full text-[11px] sm:text-xs font-bold tracking-wide border transition-all duration-300 bg-emerald-950/80 text-emerald-300 border-emerald-500/50 shadow flex items-center gap-1.5";
-        text.innerText = GameState.actionState === 'discard' ? "Выберите карту для сброса" : "Ваш ход — разыграйте карту";
+        banner.className = "px-2 py-0.5 rounded-full text-[11px] font-extrabold border bg-emerald-950/90 text-emerald-300 border-emerald-500/60 flex items-center gap-1 truncate shadow";
+        text.innerText = "Ваш ход";
         dot.className = "w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping shrink-0";
       } else {
-        banner.className = "px-2.5 py-0.5 sm:py-1 rounded-full text-[11px] sm:text-xs font-bold tracking-wide border transition-all duration-300 bg-rose-950/80 text-rose-300 border-rose-500/50 shadow flex items-center gap-1.5";
-        text.innerText = GameState.mode === 'online' ? "Ход Соперника..." : "Ход ИИ...";
+        banner.className = "px-2 py-0.5 rounded-full text-[11px] font-extrabold border bg-rose-950/90 text-rose-300 border-rose-500/60 flex items-center gap-1 truncate shadow";
+        text.innerText = `Ход: ${GameState.p2.name}`;
         dot.className = "w-1.5 h-1.5 rounded-full bg-rose-400 animate-pulse shrink-0";
       }
     }
 
+    // --- RENDER COMPACT, PUNCHY CARDS (NO TEXT OVERLOAD, 100% CLEAR NUMBERS) ---
     function renderHandCards() {
       const container = document.getElementById('cardsHandContainer');
       container.innerHTML = '';
@@ -1889,92 +2161,80 @@
         const affordable = canAfford(GameState.p1, card);
         const cardEl = document.createElement('div');
 
-        // Detailed resource names, icons and styles
-        let resName = 'Камень';
-        let borderClass = 'border-amber-500/80 bg-gradient-to-b from-slate-900 via-amber-950/90 to-black text-amber-200';
-        let costBadgeColor = 'bg-amber-500 text-slate-950 border border-amber-300';
-        let artBoxBg = 'bg-gradient-to-br from-amber-600/30 to-amber-950/70 border-amber-500/50 text-amber-300';
-        let tagBg = 'bg-amber-500/20 text-amber-300 border-amber-500/40';
+        let borderClass = 'border-amber-500 bg-gradient-to-b from-slate-800 to-slate-950';
+        let costBadgeColor = 'bg-amber-500 text-slate-950';
+        let effectBoxColor = 'bg-amber-950/90 border-amber-500/60 text-amber-200';
         let resIcon = '🧱';
-        let typeName = 'ЗАЩИТА';
 
         if (card.res === 'weapons') {
-          resName = 'Оружие';
-          borderClass = 'border-rose-500/80 bg-gradient-to-b from-slate-900 via-rose-950/90 to-black text-rose-200';
-          costBadgeColor = 'bg-rose-500 text-white border border-rose-300';
-          artBoxBg = 'bg-gradient-to-br from-rose-600/30 to-rose-950/70 border-rose-500/50 text-rose-300';
-          tagBg = 'bg-rose-500/20 text-rose-300 border-rose-500/40';
+          borderClass = 'border-rose-500 bg-gradient-to-b from-slate-800 to-slate-950';
+          costBadgeColor = 'bg-rose-500 text-white';
+          effectBoxColor = 'bg-rose-950/90 border-rose-500/60 text-rose-200';
           resIcon = '⚔️';
-          typeName = 'АТАКА';
         } else if (card.res === 'magic') {
-          resName = 'Магия';
-          borderClass = 'border-purple-500/80 bg-gradient-to-b from-slate-900 via-purple-950/90 to-black text-purple-200';
-          costBadgeColor = 'bg-purple-500 text-white border border-purple-300';
-          artBoxBg = 'bg-gradient-to-br from-purple-600/30 to-purple-950/70 border-purple-500/50 text-purple-300';
-          tagBg = 'bg-purple-500/20 text-purple-300 border-purple-500/40';
+          borderClass = 'border-purple-500 bg-gradient-to-b from-slate-800 to-slate-950';
+          costBadgeColor = 'bg-purple-500 text-white';
+          effectBoxColor = 'bg-purple-950/90 border-purple-500/60 text-purple-200';
           resIcon = '✨';
-          typeName = card.type === 'hybrid' ? 'ГИБРИД' : 'МАГИЯ';
-        }
-
-        // Custom badges for Economy and Sabotage cards
-        if (card.type === 'economy' || (card.effect && card.effect.type.startsWith('income_boost'))) {
-          typeName = 'ДОХОД ⚡';
-          tagBg = 'bg-emerald-500/30 text-emerald-300 border-emerald-400/60';
-        } else if (card.type === 'sabotage' || (card.effect && card.effect.type.startsWith('income_damage'))) {
-          typeName = 'ДИВЕРСИЯ 💣';
-          tagBg = 'bg-red-500/30 text-red-300 border-red-400/60';
         }
 
         const readyGlow = (affordable && isMyTurn) ? 'glow-ready' : '';
         const disabledClass = (!affordable || !isMyTurn) ? 'disabled' : '';
 
-        cardEl.className = `card-item flex-1 max-w-[70px] xs:max-w-[85px] sm:max-w-[125px] h-full rounded-xl border-2 ${borderClass} p-1 flex flex-col justify-between shadow-md relative cursor-pointer shrink-0 ${readyGlow} ${disabledClass}`;
+        cardEl.className = `card-item w-full h-full rounded-xl border-2 ${borderClass} p-1 sm:p-1.5 flex flex-col justify-between shadow-md relative cursor-pointer overflow-hidden ${readyGlow} ${disabledClass}`;
 
+        const isDiscardMode = GameState.actionState === 'discard';
         cardEl.innerHTML = `
-          <!-- Header: Resource Used and Quantity Required -->
-          <div class="flex items-center justify-between gap-0.5">
-            <span class="text-[7px] xs:text-[8px] font-bold px-1 py-0.2 rounded border ${tagBg} font-mono uppercase tracking-wider">
-              ${typeName}
-            </span>
-            <!-- Explicit Resource Badge (e.g. 🧱 4 Камень) -->
-            <span class="text-[7px] xs:text-[8px] sm:text-[9px] font-black px-1.5 py-0.2 rounded-md ${costBadgeColor} font-mono shadow flex items-center gap-0.5 whitespace-nowrap" title="Нужно ресурса: ${card.cost} (${resName})">
-              <span>${resIcon}</span> <span>${card.cost}</span> <span class="hidden xs:inline">${resName}</span>
-            </span>
-          </div>
-
-          <!-- Card Illustration & Name -->
-          <div class="my-auto w-full flex flex-col items-center pointer-events-none">
-            <div class="w-full h-7 xs:h-9 sm:h-12 rounded-lg border flex items-center justify-center text-sm xs:text-base sm:text-2xl shadow-inner relative overflow-hidden ${artBoxBg}">
-              <div class="absolute inset-0 bg-radial from-transparent to-black/30"></div>
-              <span>${card.icon}</span>
+          <!-- PLAY ZONE (Top & Center) -->
+          <div class="card-play-zone flex-1 flex flex-col justify-between w-full pointer-events-none">
+            <!-- 1. TOP: COST BADGE -->
+            <div class="flex items-center justify-between gap-0.5 w-full">
+              <span class="text-[10px] sm:text-xs font-black px-1.5 py-0.2 rounded-md ${costBadgeColor} font-mono shadow flex items-center gap-0.5">
+                <span>${resIcon}</span><span>${card.cost}</span>
+              </span>
+              <span class="text-[8px] sm:text-[10px] font-black ${affordable ? 'text-emerald-400' : 'text-rose-400'}">
+                ${affordable ? '▶ ХОД' : 'МАЛО'}
+              </span>
             </div>
-            <div class="font-fantasy font-bold text-[8px] xs:text-[9px] sm:text-[10px] text-white leading-tight truncate w-full text-center mt-0.5">
-              ${card.name}
+
+            <!-- 2. CENTER: ICON + SHORT NAME -->
+            <div class="flex flex-col items-center text-center my-auto px-0.5">
+              <div class="text-xl sm:text-3xl leading-none mb-0.5">${card.icon}</div>
+              <div class="font-extrabold text-[9px] sm:text-xs text-white leading-tight truncate w-full">
+                ${card.name}
+              </div>
             </div>
-          </div>
 
-          <!-- Bottom Row: Dedicated [- Сброс] button in lower left corner + Stat on Right -->
-          <div class="w-full flex items-center gap-1 mt-auto">
-            <!-- Discard Button directly in the bottom-left corner of the card -->
-            <button class="btn-card-discard px-1 py-0.5 xs:px-1.5 xs:py-0.5 rounded bg-red-600 hover:bg-red-500 active:scale-90 text-white font-black text-[9px] xs:text-[10px] sm:text-xs shadow border border-red-300 flex items-center gap-0.5 shrink-0 z-30 transition" title="Сбросить эту карту" data-card-idx="${index}">
-              <span>−</span><span class="text-[8px] hidden xs:inline">Сброс</span>
-            </button>
-
-            <!-- Card Stat Value Badge -->
-            <div class="flex-1 bg-slate-950/85 rounded border border-slate-800 p-0.5 text-center overflow-hidden pointer-events-none">
-              <div class="text-[7px] xs:text-[8px] sm:text-[9px] font-black text-amber-300 font-mono leading-none truncate">
-                ${card.stat || card.desc}
+            <!-- 3. EFFECT PILL (e.g. 💥 −12 УРОН) -->
+            <div class="w-full rounded-md border ${effectBoxColor} py-0.5 px-0.5 text-center mb-1">
+              <div class="text-[8px] sm:text-[11px] font-black leading-none truncate">
+                ${card.shortTag}
               </div>
             </div>
           </div>
+
+          <!-- 4. BOTTOM: ALWAYS-VISIBLE BRIGHT RED DISCARD BUTTON -->
+          <button type="button" class="btn-card-discard w-full py-1 rounded-lg ${isDiscardMode ? 'bg-amber-500 text-slate-950 animate-pulse' : 'bg-red-600 hover:bg-red-500 active:bg-red-700 text-white'} font-black text-[9px] sm:text-xs flex items-center justify-center gap-0.5 shadow border border-red-300/80 z-30 shrink-0 transition" title="Сбросить эту карту и взять новую" data-card-idx="${index}">
+            <span>−</span><span>Сброс</span>
+          </button>
         `;
 
-        // Clicking card body -> Play card
+        // Show 1-line clear description in bar above hand on hover/touch
+        const showHint = () => {
+          const hint = document.getElementById('selectedCardHint');
+          if (hint) {
+            hint.innerHTML = `<b class="text-amber-300">${card.icon} ${card.name} (${resIcon}${card.cost}):</b> <span class="text-white font-semibold">${card.desc}</span>`;
+          }
+        };
+
+        cardEl.addEventListener('mouseenter', showHint);
+        cardEl.addEventListener('touchstart', showHint, { passive: true });
+
         cardEl.addEventListener('click', () => {
+          showHint();
           onCardClicked(index);
         });
 
-        // Clicking bottom-left discard button -> Discard card immediately
         const discardBtn = cardEl.querySelector('.btn-card-discard');
         if (discardBtn) {
           discardBtn.addEventListener('click', (e) => {
@@ -1991,20 +2251,27 @@
     function onCardClicked(handIndex) {
       if (GameState.isGameOver || GameState.currentTurnPlayer !== 1) return;
 
+      if (GameState.actionState === 'discard') {
+        GameState.actionState = 'play';
+        updateDiscardModeUI();
+        discardCardDirect(handIndex);
+        return;
+      }
+
       const player = GameState.p1;
       const opponent = GameState.p2;
       const card = player.hand[handIndex];
       if (!card) return;
 
       if (!canAfford(player, card)) {
-        const resLabel = card.res === 'bricks' ? 'камня' : (card.res === 'weapons' ? 'оружия' : 'магии');
-        document.getElementById('turnBannerText').innerText = `Нужно ${card.cost} ${resLabel}! Нажмите [− Сброс] на карте`;
-        setTimeout(() => updateTurnBanner(), 2200);
+        const resLabel = card.res === 'bricks' ? 'камня 🧱' : (card.res === 'weapons' ? 'оружия ⚔️' : 'магии ✨');
+        const missing = card.cost - player.resources[card.res];
+        document.getElementById('turnBannerText').innerText = `Ещё ${missing} ${resLabel}`;
+        setTimeout(() => updateTurnBanner(), 1800);
         playSound('discard');
         return;
       }
 
-      // Spend resources & play card
       player.resources[card.res] -= card.cost;
       GameState.stats.cardsPlayed++;
       playSound('card_play');
@@ -2013,7 +2280,7 @@
       GameState.discard.push(card);
 
       const effectDesc = applyCardEffect(card, player, opponent, true);
-      updatePlayedStage("Вы", card.name, effectDesc, card.icon, "p1");
+      updatePlayedStage("Вы сыграли", card.name, card.shortTag, card.icon, "p1");
       logAction("p1", `разыграл «${card.name}»: ${effectDesc}`);
 
       if (GameState.mode === 'online') {
@@ -2025,9 +2292,26 @@
       endTurn();
     }
 
-    // --- DIRECT CARD DISCARD (VIA BOTTOM-LEFT MINUS BUTTON) ---
+    function updateDiscardModeUI() {
+      const btn = document.getElementById('btnToggleDiscardMode');
+      const txt = document.getElementById('discardModeBtnText');
+      if (!btn || !txt) return;
+      if (GameState.actionState === 'discard') {
+        btn.className = "px-2.5 py-0.5 rounded-lg bg-amber-400 text-slate-950 font-black text-[10px] sm:text-xs shrink-0 shadow border border-white animate-pulse transition flex items-center gap-1";
+        txt.innerText = "Выберите карту (Отмена)";
+        document.getElementById('turnBannerText').innerText = "Нажмите карту для сброса";
+      } else {
+        btn.className = "px-2.5 py-0.5 rounded-lg bg-red-600 hover:bg-red-500 text-white font-black text-[10px] sm:text-xs shrink-0 shadow border border-red-400 transition flex items-center gap-1";
+        txt.innerText = "Сбросить карту";
+        updateTurnBanner();
+      }
+      renderHandCards();
+    }
+
+    // --- DIRECT CARD DISCARD ---
     function discardCardDirect(handIndex) {
       if (GameState.isGameOver || GameState.currentTurnPlayer !== 1) return;
+      GameState.actionState = 'play';
 
       const player = GameState.p1;
       const card = player.hand[handIndex];
@@ -2037,7 +2321,7 @@
       player.hand.splice(handIndex, 1);
       GameState.discard.push(card);
 
-      updatePlayedStage("Вы", card.name, "Сброс карты", card.icon, "p1");
+      updatePlayedStage("Вы сбросили", card.name, "Заменена на новую", card.icon, "p1");
       logAction("p1", `сбросил карту «${card.name}»`);
 
       if (GameState.mode === 'online') {
@@ -2048,71 +2332,117 @@
       updateUI();
       endTurn();
     }
+
     // --- EVENT LISTENERS & UI SETUP ---
     function setupEventListeners() {
-      
-      // Token Airdrop Modal
+      const mainMenuModal = document.getElementById('mainMenuModal');
       const tokenModal = document.getElementById('tokenModal');
-      const btnTokenOpen = document.getElementById('btnTokenOpen');
-      const btnTokenClose = document.getElementById('btnTokenClose');
-      const btnClaimMining = document.getElementById('btnClaimMining');
-      const btnQuestInvite = document.getElementById('btnQuestInviteFriend');
+      const loginModal = document.getElementById('loginModal');
+      const onlineModal = document.getElementById('onlineModal');
+      const rulesModal = document.getElementById('rulesModal');
+      const historyModal = document.getElementById('historyModal');
 
-      if (btnTokenOpen && tokenModal) {
-        btnTokenOpen.addEventListener('click', () => {
-          tokenModal.classList.remove('hidden');
-          playSound('coin');
-          triggerHaptic('impact');
-          updateProfileUI();
-        });
-      }
-      if (btnTokenClose && tokenModal) {
-        btnTokenClose.addEventListener('click', () => tokenModal.classList.add('hidden'));
-      }
-      if (btnClaimMining) {
-        btnClaimMining.addEventListener('click', () => {
-          UserAccount.tokens = (UserAccount.tokens || 0) + 60;
-          UserAccount.lastClaimTime = Date.now();
-          saveProfile();
-          playSound('coin');
-          triggerHaptic('success');
-          document.getElementById('passiveMiningReward').innerText = "Накопление... (+5 $TOWER/мин)";
-          btnClaimMining.innerText = "Собрано!";
-          btnClaimMining.disabled = true;
-          btnClaimMining.className = "px-3 py-1.5 rounded-lg bg-slate-800 text-slate-500 font-bold text-xs shrink-0 cursor-not-allowed";
-          for (let i = 0; i < 20; i++) spawnParticles(window.innerWidth / 2, window.innerHeight / 2, 1, 'heal');
-          setTimeout(() => {
-            btnClaimMining.innerText = "Забрать";
-            btnClaimMining.disabled = false;
-            btnClaimMining.className = "px-3 py-1.5 rounded-lg bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-slate-950 font-black text-xs transition shadow shrink-0";
-          }, 60000);
-        });
-      }
-      if (btnQuestInvite) {
-        btnQuestInvite.addEventListener('click', () => {
-          const btnShare = document.getElementById('btnTelegramShare');
-          if (btnShare) btnShare.click();
-          UserAccount.tokens = (UserAccount.tokens || 0) + 100;
-          saveProfile();
-          playSound('coin');
+      // Close / Minimize button in top-right corner
+      const btnCloseApp = document.getElementById('btnCloseMiniApp');
+      if (btnCloseApp) {
+        btnCloseApp.addEventListener('click', () => {
+          if (window.Telegram && window.Telegram.WebApp && typeof window.Telegram.WebApp.close === 'function') {
+            window.Telegram.WebApp.close();
+          } else {
+            mainMenuModal.classList.remove('hidden');
+          }
         });
       }
 
-      // Audio toggle
+      document.getElementById('btnOpenMainMenu').addEventListener('click', () => {
+        updateProfileUI();
+        mainMenuModal.classList.remove('hidden');
+      });
+      document.getElementById('btnResumeMatch').addEventListener('click', () => {
+        mainMenuModal.classList.add('hidden');
+      });
+      document.getElementById('btnGameOverMainMenu').addEventListener('click', () => {
+        document.getElementById('gameOverModal').classList.add('hidden');
+        updateProfileUI();
+        mainMenuModal.classList.remove('hidden');
+      });
+
+      document.getElementById('btnStartAutoMatch').addEventListener('click', () => startAutoMatchmaking());
+      document.getElementById('btnModalAutoMatch').addEventListener('click', () => startAutoMatchmaking());
+      document.getElementById('btnPlayAgain').addEventListener('click', () => startAutoMatchmaking());
+      document.getElementById('btnCancelMatchmaking').addEventListener('click', () => cancelAutoMatchmaking());
+
+      document.getElementById('btnMatchmakingInviteFriend').addEventListener('click', () => {
+        cancelAutoMatchmaking();
+        mainMenuModal.classList.add('hidden');
+        onlineModal.classList.remove('hidden');
+        shareGameInTelegram(true);
+      });
+
+      document.getElementById('btnMenuPlayBot').addEventListener('click', () => {
+        GameState.mode = 'bot';
+        document.getElementById('modeText').innerText = 'Против ИИ';
+        document.getElementById('modeIcon').innerText = '🤖';
+        mainMenuModal.classList.add('hidden');
+        initGame();
+      });
+
+      document.getElementById('btnMenuOpenRules').addEventListener('click', () => rulesModal.classList.remove('hidden'));
+      document.getElementById('btnMenuOpenProfile').addEventListener('click', () => loginModal.classList.remove('hidden'));
+
+      document.getElementById('btnMenuInviteDuel').addEventListener('click', () => {
+        mainMenuModal.classList.add('hidden');
+        onlineModal.classList.remove('hidden');
+        shareGameInTelegram(true);
+      });
+      document.getElementById('btnMenuShareGameReward').addEventListener('click', () => shareGameInTelegram(false));
+      document.getElementById('btnQuickInviteHeader').addEventListener('click', () => shareGameInTelegram(true));
+      document.getElementById('btnQuestInviteFriend').addEventListener('click', () => shareGameInTelegram(false));
+      document.getElementById('btnTelegramShare').addEventListener('click', () => shareGameInTelegram(true));
+
+      document.getElementById('btnAddGameToHome').addEventListener('click', () => addGameToHomeScreen());
+      document.getElementById('btnModalAddHome').addEventListener('click', () => addGameToHomeScreen());
+
+      document.getElementById('btnCopyGameLink').addEventListener('click', () => {
+        const link = 'https://t.me/TowerBattlesGame_bot/play';
+        try { navigator.clipboard.writeText(link); } catch(e) { document.execCommand('copy'); }
+        const btn = document.getElementById('btnCopyGameLink');
+        btn.innerText = 'Скопировано!';
+        setTimeout(() => btn.innerText = 'Копировать', 1800);
+      });
+
+      document.getElementById('btnTokenOpen').addEventListener('click', () => {
+        tokenModal.classList.remove('hidden');
+        playSound('coin');
+        updateProfileUI();
+      });
+      document.getElementById('btnTokenClose').addEventListener('click', () => tokenModal.classList.add('hidden'));
+
+      document.getElementById('btnClaimMining').addEventListener('click', () => {
+        const btnClaim = document.getElementById('btnClaimMining');
+        UserAccount.tokens = (UserAccount.tokens || 0) + 60;
+        UserAccount.lastClaimTime = Date.now();
+        saveProfile();
+        playSound('coin');
+        document.getElementById('passiveMiningReward').innerText = "Накопление... (+5 $TOWER/мин)";
+        btnClaim.innerText = "Собрано!";
+        btnClaim.disabled = true;
+        setTimeout(() => {
+          btnClaim.innerText = "Забрать";
+          btnClaim.disabled = false;
+        }, 60000);
+      });
+
       document.getElementById('btnAudioToggle').addEventListener('click', () => {
         GameState.soundEnabled = !GameState.soundEnabled;
         document.getElementById('audioIcon').innerText = GameState.soundEnabled ? '🔊' : '🔇';
         if (GameState.soundEnabled) playSound('card_play');
       });
 
-      // Rules modal
-      const rulesModal = document.getElementById('rulesModal');
       document.getElementById('btnRulesOpen').addEventListener('click', () => rulesModal.classList.remove('hidden'));
       document.getElementById('btnRulesClose').addEventListener('click', () => rulesModal.classList.add('hidden'));
       document.getElementById('btnRulesUnderstand').addEventListener('click', () => rulesModal.classList.add('hidden'));
 
-      // History log modal
-      const historyModal = document.getElementById('historyModal');
       document.getElementById('btnHistoryToggle').addEventListener('click', () => {
         renderHistory();
         historyModal.classList.remove('hidden');
@@ -2123,22 +2453,20 @@
         renderHistory();
       });
 
-      // Restart match
       document.getElementById('btnRestartMatch').addEventListener('click', () => initGame());
-      document.getElementById('btnPlayAgain').addEventListener('click', () => initGame());
 
-      // Card play/discard handled directly per card
+      const btnToggleDiscard = document.getElementById('btnToggleDiscardMode');
+      if (btnToggleDiscard) {
+        btnToggleDiscard.addEventListener('click', () => {
+          if (GameState.isGameOver || GameState.currentTurnPlayer !== 1) return;
+          GameState.actionState = GameState.actionState === 'discard' ? 'play' : 'discard';
+          updateDiscardModeUI();
+        });
+      }
 
-      // Profile Modal
-      const loginModal = document.getElementById('loginModal');
-      document.getElementById('btnProfileOpen').addEventListener('click', () => {
-        loginModal.classList.remove('hidden');
-      });
-      document.getElementById('btnLoginClose').addEventListener('click', () => {
-        loginModal.classList.add('hidden');
-      });
+      document.getElementById('btnProfileOpen').addEventListener('click', () => loginModal.classList.remove('hidden'));
+      document.getElementById('btnLoginClose').addEventListener('click', () => loginModal.classList.add('hidden'));
 
-      // Avatar picker
       document.getElementById('avatarPicker').addEventListener('click', (e) => {
         const btn = e.target.closest('button');
         if (btn && btn.dataset.avatar) {
@@ -2152,7 +2480,6 @@
         }
       });
 
-      // Save Profile
       document.getElementById('btnSaveProfile').addEventListener('click', () => {
         const nick = document.getElementById('inputNickname').value.trim();
         if (nick) UserAccount.name = nick;
@@ -2160,7 +2487,6 @@
         loginModal.classList.add('hidden');
       });
 
-      // Yandex ID Login
       document.getElementById('btnYandexAuth').addEventListener('click', () => {
         if (ysdk && ysdk.auth) {
           ysdk.auth.openAuthDialog().then(() => {
@@ -2170,20 +2496,15 @@
               saveProfile();
               loginModal.classList.add('hidden');
             });
-          }).catch(err => {
-            console.warn('Auth dialog error:', err);
-          });
+          }).catch(() => {});
         } else {
-          // Local prompt simulation
-          const nick = document.getElementById('inputNickname').value.trim() || "Яндекс_Герой";
+          const nick = document.getElementById('inputNickname').value.trim() || UserAccount.name;
           UserAccount.name = nick;
           saveProfile();
           loginModal.classList.add('hidden');
         }
       });
 
-      // Online Multiplayer Lobby
-      const onlineModal = document.getElementById('onlineModal');
       document.getElementById('btnOnlineLobby').addEventListener('click', () => {
         initPeerJS();
         onlineModal.classList.remove('hidden');
@@ -2192,51 +2513,25 @@
         initPeerJS();
         onlineModal.classList.remove('hidden');
       });
-      document.getElementById('btnOnlineClose').addEventListener('click', () => {
-        onlineModal.classList.add('hidden');
-      });
+      document.getElementById('btnOnlineClose').addEventListener('click', () => onlineModal.classList.add('hidden'));
       document.getElementById('btnCancelOnline').addEventListener('click', () => {
         GameState.mode = 'bot';
         document.getElementById('modeText').innerText = 'Против ИИ';
         document.getElementById('modeIcon').innerText = '🤖';
         onlineModal.classList.add('hidden');
+        mainMenuModal.classList.add('hidden');
         initGame();
       });
-
-      // Copy room ID
-      
-      // Telegram Share Duel Link
-      const btnTgShare = document.getElementById('btnTelegramShare');
-      if (btnTgShare) {
-        btnTgShare.addEventListener('click', () => {
-          const roomId = document.getElementById('myRoomIdInput').value;
-          if (!roomId) return;
-          const gameUrl = window.location.href.split('?')[0].split('#')[0] + '?room=' + encodeURIComponent(roomId);
-          const shareText = `⚔️ Я вызываю тебя на дуэль в игре «Карточные Баталии — Битва Башен»!\nКод комнаты: ${roomId}`;
-          const tgShareUrl = `https://t.me/share/url?url=${encodeURIComponent(gameUrl)}&text=${encodeURIComponent(shareText)}`;
-          
-          if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.openTelegramLink) {
-            window.Telegram.WebApp.openTelegramLink(tgShareUrl);
-          } else {
-            window.open(tgShareUrl, '_blank');
-          }
-        });
-      }
 
       document.getElementById('btnCopyRoomId').addEventListener('click', () => {
         const id = document.getElementById('myRoomIdInput').value;
         if (id) {
-          try {
-            navigator.clipboard.writeText(id);
-          } catch(e) {
-            document.execCommand('copy');
-          }
+          try { navigator.clipboard.writeText(id); } catch(e) { document.execCommand('copy'); }
           document.getElementById('btnCopyRoomId').innerText = 'Скопировано!';
           setTimeout(() => document.getElementById('btnCopyRoomId').innerText = 'Код', 1800);
         }
       });
 
-      // Connect to target room
       document.getElementById('btnConnectRoom').addEventListener('click', () => {
         const targetId = document.getElementById('inputTargetRoomId').value.trim();
         if (!targetId || !peer) return;
@@ -2251,8 +2546,14 @@
       loadProfile();
       initYandexSDK();
       initTelegramApp();
+      initPeerJS();
       setupEventListeners();
-      initGame();
+      initDeck();
+      for (let i = 0; i < 5; i++) {
+        GameState.p1.hand.push(drawCard());
+        GameState.p2.hand.push(drawCard());
+      }
+      updateUI();
     });
   </script>
 </body>
