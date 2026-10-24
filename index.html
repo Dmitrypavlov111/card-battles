@@ -520,11 +520,19 @@
         </div>
       </div>
 
+      <div id="mmRoomCodeBox" class="hidden bg-indigo-950/90 border border-indigo-400/50 rounded-xl p-2 mb-3 text-xs font-mono">
+        <span class="text-slate-300">Код вашей комнаты: </span>
+        <b id="mmRoomCodeText" class="text-amber-300 font-black">CB_...</b>
+      </div>
+
       <div class="space-y-2">
-        <button id="btnMatchmakingInviteFriend" class="w-full py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow">
+        <button id="btnMatchmakingInviteFriend" class="w-full py-2.5 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 font-black text-xs flex items-center justify-center gap-1.5 shadow">
           <span>✈️</span> <span>Играть с другом из Telegram</span>
         </button>
-        <button id="btnCancelMatchmaking" class="w-full py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white font-bold text-xs transition">
+        <button id="btnMatchmakingPlayBotNow" class="w-full py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 font-bold text-xs transition">
+          🤖 Тренировка с ботом (не ждать)
+        </button>
+        <button id="btnCancelMatchmaking" class="w-full py-2 rounded-xl bg-slate-950 hover:bg-slate-800 text-slate-400 hover:text-white font-bold text-xs transition">
           Отмена
         </button>
       </div>
@@ -1048,6 +1056,9 @@
         updateUI();
 
         if (missed >= MAX_MISSED_TURNS) {
+          if (GameState.mode === 'online') {
+            sendNetAction({ actionType: 'forfeit_timeout' });
+          }
           finishGame(2, `Поражение за бездействие: вы пропустили ${MAX_MISSED_TURNS} ходов по таймеру!`);
           return;
         }
@@ -1293,15 +1304,81 @@
       }
     }
 
-    // --- TELEGRAM WEB APP (TMA) & SHARE INTEGRATION ---
+    // --- PERSISTENT ROOM ID & ICE SERVERS FOR MOBILE NAT TRAVERSAL ---
+    const PEER_ICE_CONFIG = {
+      iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:stun1.l.google.com:19302' },
+        { urls: 'stun:stun2.l.google.com:19302' },
+        { urls: 'stun:stun.cloudflare.com:3478' },
+        {
+          urls: 'turn:openrelay.metered.ca:80',
+          username: 'openrelayproject',
+          credential: 'openrelayproject'
+        },
+        {
+          urls: 'turn:openrelay.metered.ca:443',
+          username: 'openrelayproject',
+          credential: 'openrelayproject'
+        },
+        {
+          urls: 'turn:openrelay.metered.ca:443?transport=tcp',
+          username: 'openrelayproject',
+          credential: 'openrelayproject'
+        }
+      ]
+    };
+
+    let myPersistentRoomId = '';
+    function getOrCreateMyRoomId() {
+      if (myPersistentRoomId) return myPersistentRoomId;
+      try {
+        const saved = sessionStorage.getItem('cb_my_room_id');
+        if (saved && saved.startsWith('CB_')) {
+          myPersistentRoomId = saved;
+          return myPersistentRoomId;
+        }
+      } catch(e) {}
+      myPersistentRoomId = 'CB_' + Math.random().toString(36).substring(2, 8).toUpperCase();
+      try { sessionStorage.setItem('cb_my_room_id', myPersistentRoomId); } catch(e) {}
+      return myPersistentRoomId;
+    }
+
+    // --- TELEGRAM WEB APP (TMA) & AUTOMATIC INVITE LINK DETECTION ---
     let tgApp = null;
+    let pendingInviteRoomCode = null;
+
+    function detectIncomingInviteCode() {
+      // 1. Check Telegram WebApp start_param (from https://t.me/TowerBattlesGame_bot/play?startapp=CB_XXXX)
+      if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe) {
+        const sp = window.Telegram.WebApp.initDataUnsafe.start_param;
+        if (sp && String(sp).trim()) return String(sp).trim().toUpperCase();
+      }
+      // 2. Check URL query parameters (?room=CB_XXXX, ?startapp=CB_XXXX, ?tgWebAppStartParam=CB_XXXX)
+      try {
+        const urlParams = new URLSearchParams(window.location.search);
+        for (const key of ['room', 'startapp', 'tgWebAppStartParam', 'start']) {
+          const val = urlParams.get(key);
+          if (val && val.trim()) return val.trim().toUpperCase();
+        }
+      } catch(e) {}
+      // 3. Check URL hash (#room=CB_XXXX)
+      try {
+        if (window.location.hash && window.location.hash.length > 1) {
+          const hashParams = new URLSearchParams(window.location.hash.substring(1).replace(/^\?/, ''));
+          const r = hashParams.get('room') || hashParams.get('startapp') || hashParams.get('tgWebAppStartParam');
+          if (r && r.trim()) return r.trim().toUpperCase();
+        }
+      } catch(e) {}
+      return null;
+    }
+
     function initTelegramApp() {
       if (window.Telegram && window.Telegram.WebApp) {
         tgApp = window.Telegram.WebApp;
         try {
           tgApp.ready();
           tgApp.expand();
-          // Enable vertical swipe down so user can easily minimize/close the game from top of screen
           if (typeof tgApp.enableVerticalSwipes === 'function') {
             tgApp.enableVerticalSwipes();
           }
@@ -1315,49 +1392,102 @@
           UserAccount.isAuth = true;
           saveProfile();
         }
-
-        const startParam = tgApp.initDataUnsafe?.start_param;
-        if (startParam) {
-          connectToRoomFromInvite(startParam);
-        }
       }
 
-      try {
-        const urlParams = new URLSearchParams(window.location.search);
-        const roomParam = urlParams.get('room');
-        if (roomParam) {
-          connectToRoomFromInvite(roomParam);
-        }
-      } catch(e) {}
+      const detectedCode = detectIncomingInviteCode();
+      if (detectedCode && detectedCode !== getOrCreateMyRoomId()) {
+        pendingInviteRoomCode = detectedCode;
+      }
     }
+
+    // --- AUTOMATIC CONNECTION WHEN OPENING AN INVITE LINK ---
+    let inviteRetryInterval = null;
+    let inviteRetryCount = 0;
 
     function connectToRoomFromInvite(roomCode) {
-      const mainMenu = document.getElementById('mainMenuModal');
-      if (mainMenu) mainMenu.classList.add('hidden');
-      const onlineModal = document.getElementById('onlineModal');
-      if (onlineModal) onlineModal.classList.remove('hidden');
+      if (!roomCode) return;
+      const cleanCode = String(roomCode).trim().toUpperCase();
+      if (!cleanCode) return;
+
+      // Hide all other modals and show automatic connection screen
+      document.getElementById('mainMenuModal')?.classList.add('hidden');
+      document.getElementById('onlineModal')?.classList.add('hidden');
+      document.getElementById('gameOverModal')?.classList.add('hidden');
+
+      const mmModal = document.getElementById('matchmakingModal');
+      if (mmModal) mmModal.classList.remove('hidden');
+
+      const codeBox = document.getElementById('mmRoomCodeBox');
+      const codeTxt = document.getElementById('mmRoomCodeText');
+      if (codeBox && codeTxt) {
+        codeBox.classList.remove('hidden');
+        codeTxt.innerText = cleanCode;
+      }
+
+      document.getElementById('mmPlayerRating').innerText = `${UserAccount.rating} 🏆`;
+      document.getElementById('matchmakingTitle').innerText = "Подключение к другу...";
+      document.getElementById('matchmakingSubtitle').innerText = `Входим в комнату ${cleanCode} — бой запустится автоматически!`;
+
       const inputTarget = document.getElementById('inputTargetRoomId');
-      if (inputTarget) inputTarget.value = roomCode;
+      if (inputTarget) inputTarget.value = cleanCode;
+
       initPeerJS();
-      setTimeout(() => {
-        const btnConnect = document.getElementById('btnConnectRoom');
-        if (btnConnect) btnConnect.click();
-      }, 900);
+
+      if (inviteRetryInterval) clearInterval(inviteRetryInterval);
+      if (mmInterval) { clearInterval(mmInterval); mmInterval = null; }
+      inviteRetryCount = 0;
+
+      const attemptJoin = () => {
+        if (GameState.mode === 'online' && netConn && netConn.open) {
+          clearInterval(inviteRetryInterval);
+          inviteRetryInterval = null;
+          return;
+        }
+        inviteRetryCount++;
+        const secStr = inviteRetryCount < 10 ? `00:0${inviteRetryCount}` : `00:${inviteRetryCount}`;
+        const timerEl = document.getElementById('mmSearchTimer');
+        if (timerEl) timerEl.innerText = secStr;
+
+        if (!peer || peer.Destroyed || peer.disconnected) {
+          initPeerJS();
+          return;
+        }
+        if (!peer.open) return;
+
+        try {
+          const conn = peer.connect(cleanCode, { reliable: true });
+          setupConnection(conn, false);
+        } catch(e) {}
+
+        // Also try the global invite beacon if friend's session rotated ID
+        if (inviteRetryCount >= 2) {
+          try {
+            const beaconConn = peer.connect('CB_INVITE_HOST_1', { reliable: true });
+            setupConnection(beaconConn, false);
+          } catch(e) {}
+        }
+      };
+
+      attemptJoin();
+      inviteRetryInterval = setInterval(attemptJoin, 1500);
     }
 
-    function shareGameInTelegram(withDuelRoom) {
+    // --- SEND INVITE LINK IN TELEGRAM & AUTOMATICALLY WAIT FOR FRIEND ---
+    function shareGameInTelegram() {
+      const roomId = getOrCreateMyRoomId();
       initPeerJS();
-      const roomId = document.getElementById('myRoomIdInput')?.value || '';
-      const baseBotLink = 'https://t.me/TowerBattlesGame_bot/play';
-      const inviteUrl = (withDuelRoom && roomId && !roomId.includes('...'))
-        ? `${window.location.href.split('?')[0].split('#')[0]}?room=${encodeURIComponent(roomId)}`
-        : baseBotLink;
+      startInviteHostBeacon();
 
-      const inviteText = withDuelRoom
-        ? `⚔️ Вызываю тебя на онлайн-дуэль в «Карточные Баталии: Битва Башен»! Заходи в мою комнату (${roomId}) и сразимся 1 на 1!`
-        : `🏰 Заходи в «Карточные Баталии: Битва Башен» прямо в Telegram! Строй замок, круши врагов катапультами и получай бонус +250 $TOWER!`;
+      const inp = document.getElementById('myRoomIdInput');
+      if (inp) inp.value = roomId;
 
-      const tgShareUrl = `https://t.me/share/url?url=${encodeURIComponent(inviteUrl)}&text=${encodeURIComponent(inviteText)}`;
+      // Primary link uses Telegram Mini App startapp deep-link so clicking it opens Mini App inside Telegram with start_param!
+      const tmaInviteUrl = `https://t.me/TowerBattlesGame_bot/play?startapp=${encodeURIComponent(roomId)}`;
+      const webInviteUrl = `https://dmitrypavlov111.github.io/card-battles/?room=${encodeURIComponent(roomId)}`;
+
+      const inviteText = `⚔️ Вызываю тебя на бой 1 на 1 в «Карточные Баталии: Битва Башен»!\n👉 Нажми на ссылку — мы автоматически зайдём в бой (комната ${roomId}):\n${webInviteUrl}`;
+
+      const tgShareUrl = `https://t.me/share/url?url=${encodeURIComponent(tmaInviteUrl)}&text=${encodeURIComponent(inviteText)}`;
 
       UserAccount.tokens = (UserAccount.tokens || 0) + 250;
       UserAccount.rating = (UserAccount.rating || 1000) + 25;
@@ -1366,11 +1496,54 @@
       playSound('coin');
       triggerHaptic('success');
 
+      // Put sender immediately into "Waiting for Friend (Auto-Start Battle)" mode (NO BOT!)
+      startWaitingForInvitedFriend(roomId);
+
       if (window.Telegram && window.Telegram.WebApp && typeof window.Telegram.WebApp.openTelegramLink === 'function') {
         window.Telegram.WebApp.openTelegramLink(tgShareUrl);
       } else {
         window.open(tgShareUrl, '_blank');
       }
+    }
+
+    function startWaitingForInvitedFriend(roomId) {
+      document.getElementById('mainMenuModal')?.classList.add('hidden');
+      document.getElementById('onlineModal')?.classList.add('hidden');
+      document.getElementById('gameOverModal')?.classList.add('hidden');
+
+      const mmModal = document.getElementById('matchmakingModal');
+      if (mmModal) mmModal.classList.remove('hidden');
+
+      const codeBox = document.getElementById('mmRoomCodeBox');
+      const codeTxt = document.getElementById('mmRoomCodeText');
+      if (codeBox && codeTxt) {
+        codeBox.classList.remove('hidden');
+        codeTxt.innerText = roomId;
+      }
+
+      document.getElementById('mmPlayerRating').innerText = `${UserAccount.rating} 🏆`;
+      document.getElementById('matchmakingTitle').innerText = "⏳ Ждём друга по ссылке...";
+      document.getElementById('matchmakingSubtitle').innerText = "Как только друг перейдёт по вашей ссылке в Telegram, вы автоматически зайдёте в бой!";
+
+      if (mmInterval) clearInterval(mmInterval);
+      if (inviteRetryInterval) { clearInterval(inviteRetryInterval); inviteRetryInterval = null; }
+      mmSeconds = 0;
+
+      // Never spawn a bot here! Wait patiently for the invited friend and keep peer alive
+      mmInterval = setInterval(() => {
+        mmSeconds++;
+        const mins = String(Math.floor(mmSeconds / 60)).padStart(2, '0');
+        const secs = String(mmSeconds % 60).padStart(2, '0');
+        const timerEl = document.getElementById('mmSearchTimer');
+        if (timerEl) timerEl.innerText = `${mins}:${secs}`;
+
+        if (!peer || peer.disconnected || peer.destroyed) {
+          initPeerJS();
+        }
+        if (!inviteBeaconPeer || inviteBeaconPeer.disconnected || inviteBeaconPeer.destroyed) {
+          startInviteHostBeacon();
+        }
+      }, 1000);
     }
 
     function addGameToHomeScreen() {
@@ -1404,66 +1577,178 @@
       } catch(e) {}
     }
 
-    // --- AUTOMATIC MATCHMAKING & PEERJS ONLINE MULTIPLAYER ---
+    // --- REAL P2P MATCHMAKING, INVITE BEACON & PEERJS ONLINE MULTIPLAYER ---
     let peer = null;
+    let inviteBeaconPeer = null;
+    let lobbyHostPeer = null;
     let netConn = null;
     let mmInterval = null;
     let mmSeconds = 0;
 
     function initPeerJS() {
-      if (peer) return;
+      const roomId = getOrCreateMyRoomId();
+      const inp = document.getElementById('myRoomIdInput');
+      if (inp) inp.value = roomId;
+
+      if (peer && !peer.destroyed) {
+        if (peer.disconnected) {
+          try { peer.reconnect(); } catch(e) {}
+        }
+        return;
+      }
+
       try {
-        const randomId = 'CB_' + Math.random().toString(36).substring(2, 7).toUpperCase();
-        peer = new Peer(randomId, { debug: 1 });
+        peer = new Peer(roomId, { debug: 1, config: PEER_ICE_CONFIG });
 
         peer.on('open', (id) => {
-          const inp = document.getElementById('myRoomIdInput');
-          if (inp) inp.value = id;
+          const inputEl = document.getElementById('myRoomIdInput');
+          if (inputEl) inputEl.value = id;
           const st = document.getElementById('netStatusText');
-          if (st) st.innerText = 'Онлайн (Ожидание друга)';
+          if (st) st.innerText = 'Онлайн (Готов к дуэли)';
+
+          if (pendingInviteRoomCode) {
+            const target = pendingInviteRoomCode;
+            pendingInviteRoomCode = null;
+            connectToRoomFromInvite(target);
+          }
         });
 
         peer.on('connection', (conn) => {
-          setupConnection(conn, false);
+          setupConnection(conn, true);
         });
 
-        peer.on('error', () => {
-          const st = document.getElementById('netStatusText');
-          if (st) st.innerText = 'Готов';
+        peer.on('disconnected', () => {
+          try { peer.reconnect(); } catch(e) {}
+        });
+
+        peer.on('error', (err) => {
+          if (err && err.type === 'unavailable-id') {
+            myPersistentRoomId = 'CB_' + Math.random().toString(36).substring(2, 8).toUpperCase();
+            try { sessionStorage.setItem('cb_my_room_id', myPersistentRoomId); } catch(e) {}
+            peer = null;
+            setTimeout(initPeerJS, 300);
+          }
         });
       } catch(e) {}
     }
 
+    // Global Invite Beacon so even if friend opens the bot via "Играть" without ?room= parameter, they find the host!
+    function startInviteHostBeacon() {
+      if (inviteBeaconPeer && !inviteBeaconPeer.destroyed) return;
+      try {
+        inviteBeaconPeer = new Peer('CB_INVITE_HOST_1', { debug: 0, config: PEER_ICE_CONFIG });
+        inviteBeaconPeer.on('connection', (conn) => {
+          setupConnection(conn, true);
+        });
+        inviteBeaconPeer.on('error', () => {
+          try { inviteBeaconPeer.destroy(); } catch(e) {}
+          inviteBeaconPeer = null;
+        });
+      } catch(e) {}
+    }
+
+    function cleanupLobbyPeers() {
+      if (lobbyHostPeer) {
+        try { lobbyHostPeer.destroy(); } catch(e) {}
+        lobbyHostPeer = null;
+      }
+      if (inviteBeaconPeer) {
+        try { inviteBeaconPeer.destroy(); } catch(e) {}
+        inviteBeaconPeer = null;
+      }
+    }
+
+    // Ensure PeerJS immediately wakes up when returning from Telegram share chat selector
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) {
+        initPeerJS();
+      }
+    });
+    window.addEventListener('focus', () => {
+      initPeerJS();
+    });
+
     function startAutoMatchmaking() {
-      const mainMenu = document.getElementById('mainMenuModal');
-      if (mainMenu) mainMenu.classList.add('hidden');
-      const onlineModal = document.getElementById('onlineModal');
-      if (onlineModal) onlineModal.classList.add('hidden');
-      const gameOverModal = document.getElementById('gameOverModal');
-      if (gameOverModal) gameOverModal.classList.add('hidden');
+      document.getElementById('mainMenuModal')?.classList.add('hidden');
+      document.getElementById('onlineModal')?.classList.add('hidden');
+      document.getElementById('gameOverModal')?.classList.add('hidden');
 
       const mmModal = document.getElementById('matchmakingModal');
       if (mmModal) mmModal.classList.remove('hidden');
 
+      const roomId = getOrCreateMyRoomId();
+      const codeBox = document.getElementById('mmRoomCodeBox');
+      const codeTxt = document.getElementById('mmRoomCodeText');
+      if (codeBox && codeTxt) {
+        codeBox.classList.remove('hidden');
+        codeTxt.innerText = roomId;
+      }
+
       document.getElementById('mmPlayerRating').innerText = `${UserAccount.rating} 🏆`;
-      document.getElementById('matchmakingTitle').innerText = "Поиск соперника...";
-      document.getElementById('matchmakingSubtitle').innerText = "Ищем свободного игрока в онлайн-очереди...";
+      document.getElementById('matchmakingTitle').innerText = "Поиск живого соперника...";
+      document.getElementById('matchmakingSubtitle').innerText = "Проверяем онлайн-комнаты и приглашения друзей...";
 
       initPeerJS();
       mmSeconds = 1;
       document.getElementById('mmSearchTimer').innerText = `00:01`;
 
       if (mmInterval) clearInterval(mmInterval);
+      if (inviteRetryInterval) { clearInterval(inviteRetryInterval); inviteRetryInterval = null; }
 
-      const targetMatchSecond = Math.floor(Math.random() * 2) + 3;
+      // 1. Try connecting to any friend waiting in CB_INVITE_HOST_1 or global lobby slots CB_LOBBY_SLOT_1..2
+      const tryFindRealPlayer = () => {
+        if (!peer || !peer.open || (GameState.mode === 'online' && netConn && netConn.open)) return;
+        ['CB_INVITE_HOST_1', 'CB_LOBBY_SLOT_1', 'CB_LOBBY_SLOT_2'].forEach((slotId) => {
+          try {
+            const c = peer.connect(slotId, { reliable: true });
+            setupConnection(c, false);
+          } catch(e) {}
+        });
+      };
+
+      // 2. Also host on CB_LOBBY_SLOT_1 (or _2) so another player searching at the same time connects to us
+      const tryHostLobbySlot = (slotIndex) => {
+        if (lobbyHostPeer || (GameState.mode === 'online' && netConn && netConn.open)) return;
+        const slotName = `CB_LOBBY_SLOT_${slotIndex}`;
+        try {
+          const lp = new Peer(slotName, { debug: 0, config: PEER_ICE_CONFIG });
+          lp.on('open', () => {
+            lobbyHostPeer = lp;
+          });
+          lp.on('connection', (conn) => {
+            setupConnection(conn, true);
+          });
+          lp.on('error', () => {
+            try { lp.destroy(); } catch(e) {}
+            if (slotIndex < 2) tryHostLobbySlot(slotIndex + 1);
+          });
+        } catch(e) {}
+      };
+
+      tryFindRealPlayer();
+      setTimeout(() => tryHostLobbySlot(1), 600);
+
+      // Search for a real player for 15 seconds before offering fallback opponent
+      const targetMatchSecond = 15;
 
       mmInterval = setInterval(() => {
+        if (GameState.mode === 'online' && netConn && netConn.open) {
+          clearInterval(mmInterval);
+          mmInterval = null;
+          return;
+        }
         mmSeconds++;
-        document.getElementById('mmSearchTimer').innerText = `00:0${mmSeconds}`;
+        const secFormatted = mmSeconds < 10 ? `00:0${mmSeconds}` : `00:${mmSeconds}`;
+        document.getElementById('mmSearchTimer').innerText = secFormatted;
+
+        if (mmSeconds % 3 === 0) {
+          tryFindRealPlayer();
+        }
 
         if (mmSeconds >= targetMatchSecond) {
           clearInterval(mmInterval);
           mmInterval = null;
+          cleanupLobbyPeers();
 
           const pick = ONLINE_OPPONENTS_POOL[Math.floor(Math.random() * ONLINE_OPPONENTS_POOL.length)];
           const oppRating = Math.max(800, UserAccount.rating + pick.ratingOffset);
@@ -1481,7 +1766,7 @@
             document.getElementById('modeText').innerText = 'Онлайн Бой';
             document.getElementById('modeIcon').innerText = '⚔️';
             initGame();
-          }, 900);
+          }, 800);
         }
       }, 1000);
     }
@@ -1491,25 +1776,42 @@
         clearInterval(mmInterval);
         mmInterval = null;
       }
+      if (inviteRetryInterval) {
+        clearInterval(inviteRetryInterval);
+        inviteRetryInterval = null;
+      }
+      cleanupLobbyPeers();
       document.getElementById('matchmakingModal').classList.add('hidden');
       document.getElementById('mainMenuModal').classList.remove('hidden');
     }
 
     function setupConnection(conn, isHost) {
-      netConn = conn;
-      GameState.mode = 'online';
-      GameState.isOnlineHost = isHost;
-
-      if (mmInterval) {
-        clearInterval(mmInterval);
-        mmInterval = null;
-      }
+      if (!conn) return;
 
       conn.on('open', () => {
-        document.getElementById('onlineModal').classList.add('hidden');
-        document.getElementById('mainMenuModal').classList.add('hidden');
-        document.getElementById('matchmakingModal').classList.add('hidden');
-        document.getElementById('modeText').innerText = 'Дуэль P2P';
+        // Ignore duplicate connections if we are already connected in an active online duel
+        if (netConn && netConn.open && netConn !== conn && GameState.mode === 'online') {
+          return;
+        }
+        netConn = conn;
+        GameState.mode = 'online';
+        GameState.isOnlineHost = isHost;
+
+        if (mmInterval) {
+          clearInterval(mmInterval);
+          mmInterval = null;
+        }
+        if (inviteRetryInterval) {
+          clearInterval(inviteRetryInterval);
+          inviteRetryInterval = null;
+        }
+        cleanupLobbyPeers();
+
+        document.getElementById('onlineModal')?.classList.add('hidden');
+        document.getElementById('mainMenuModal')?.classList.add('hidden');
+        document.getElementById('matchmakingModal')?.classList.add('hidden');
+        document.getElementById('gameOverModal')?.classList.add('hidden');
+        document.getElementById('modeText').innerText = 'Дуэль с другом';
         document.getElementById('modeIcon').innerText = '🌐';
 
         conn.send({
@@ -1519,8 +1821,10 @@
           rating: UserAccount.rating
         });
 
+        playSound('victory');
+        triggerHaptic('success');
         initGame();
-        logAction("system", "Сетевое соединение с другом установлено! Бой начат!");
+        logAction("system", "Друг подключился! Онлайн-битва началась!");
       });
 
       conn.on('data', (data) => {
@@ -1528,17 +1832,23 @@
       });
 
       conn.on('close', () => {
-        logAction("system", "Соперник отключился от игры.");
-        GameState.mode = 'matched';
+        if (netConn === conn) {
+          logAction("system", "Соперник отключился от игры.");
+          netConn = null;
+          GameState.mode = 'matched';
+        }
       });
     }
 
     function handleNetworkMessage(data) {
+      if (!data) return;
       if (data.type === 'handshake') {
-        GameState.p2.name = data.name || "Онлайн Соперник";
+        GameState.p2.name = data.name || "Друг из Telegram";
         GameState.p2.avatar = data.avatar || "⚔️";
         GameState.p2.rating = data.rating || 1000;
         updateOpponentBannerUI();
+        updateTurnBanner();
+        updatePlayedStage(`Против: ${GameState.p2.name}`, GameState.currentTurnPlayer === 1 ? "Ваш ход!" : `Ходит ${GameState.p2.name}`, "Живая онлайн-дуэль 1 на 1", "⚔️", GameState.currentTurnPlayer === 1 ? "p1" : "p2");
       } else if (data.type === 'action') {
         executeRemoteAction(data);
       }
@@ -1556,7 +1866,22 @@
 
     function sendNetAction(actionData) {
       if (netConn && netConn.open) {
-        netConn.send({ type: 'action', ...actionData });
+        netConn.send({
+          type: 'action',
+          ...actionData,
+          senderState: {
+            castle: GameState.p1.castle,
+            wall: GameState.p1.wall,
+            resources: { ...GameState.p1.resources },
+            incomes: { ...GameState.p1.incomes }
+          },
+          receiverState: {
+            castle: GameState.p2.castle,
+            wall: GameState.p2.wall,
+            resources: { ...GameState.p2.resources },
+            incomes: { ...GameState.p2.incomes }
+          }
+        });
       }
     }
 
@@ -1593,7 +1918,8 @@
       stopTurnTimer();
       GameState.matchStarted = true;
       GameState.turn = 1;
-      GameState.currentTurnPlayer = 1;
+      // In Online P2P mode, Host (who created/sent the link) goes 1st (1), and Guest (friend who joined) goes 2nd (2)
+      GameState.currentTurnPlayer = (GameState.mode === 'online' && !GameState.isOnlineHost) ? 2 : 1;
       GameState.actionState = 'play';
       GameState.isGameOver = false;
       GameState.stats = { turns: 0, cardsPlayed: 0, damageDealt: 0 };
@@ -1633,7 +1959,8 @@
       document.getElementById('btnResumeMatch').classList.remove('hidden');
       document.getElementById('gameOverModal').classList.add('hidden');
 
-      updatePlayedStage(`Против: ${GameState.p2.name}`, "Ваш ход!", "20 сек на выбор карты", "⚔️", "p1");
+      const firstTurnText = GameState.currentTurnPlayer === 1 ? "Ваш ход!" : `Первый ход: ${GameState.p2.name}`;
+      updatePlayedStage(`Против: ${GameState.p2.name}`, firstTurnText, "20 сек на выбор карты", "⚔️", GameState.currentTurnPlayer === 1 ? "p1" : "p2");
       logAction("system", `Матч против ${GameState.p2.name} начался!`);
       updateUI();
       startTurnTimer();
@@ -1983,6 +2310,11 @@
     function executeRemoteAction(data) {
       const opponent = GameState.p2;
       const player = GameState.p1;
+      if (data.actionType === 'forfeit_timeout') {
+        finishGame(1, `Победа! Соперник ${opponent.name} пропустил ${MAX_MISSED_TURNS} ходов по таймеру!`);
+        return;
+      }
+
       const card = CARDS_DB.find(c => c.id === data.cardId) || drawCard();
 
       if (data.actionType === 'discard') {
@@ -1993,6 +2325,19 @@
         const effectDesc = applyCardEffect(card, opponent, player, false);
         updatePlayedStage(opponent.name, card.name, effectDesc, card.icon, "p2");
         logAction("p2", `разыграл «${card.name}»: ${effectDesc}`);
+      }
+
+      // Sync exact state if provided by peer
+      if (data.senderState && data.receiverState) {
+        opponent.castle = data.senderState.castle;
+        opponent.wall = data.senderState.wall;
+        opponent.resources = { ...data.senderState.resources };
+        opponent.incomes = { ...data.senderState.incomes };
+
+        player.castle = data.receiverState.castle;
+        player.wall = data.receiverState.wall;
+        player.resources = { ...data.receiverState.resources };
+        player.incomes = { ...data.receiverState.incomes };
       }
 
       updateUI();
@@ -2390,14 +2735,25 @@
       document.getElementById('btnMenuOpenRules').addEventListener('click', () => rulesModal.classList.remove('hidden'));
       document.getElementById('btnMenuOpenProfile').addEventListener('click', () => loginModal.classList.remove('hidden'));
 
-      document.getElementById('btnMenuInviteDuel').addEventListener('click', () => {
-        mainMenuModal.classList.add('hidden');
-        onlineModal.classList.remove('hidden');
-        shareGameInTelegram(true);
-      });
-      document.getElementById('btnMenuShareGameReward').addEventListener('click', () => shareGameInTelegram(false));
+      const btnPlayBotNow = document.getElementById('btnMatchmakingPlayBotNow');
+      if (btnPlayBotNow) {
+        btnPlayBotNow.addEventListener('click', () => {
+          if (mmInterval) { clearInterval(mmInterval); mmInterval = null; }
+          if (inviteRetryInterval) { clearInterval(inviteRetryInterval); inviteRetryInterval = null; }
+          cleanupLobbyPeers();
+          GameState.mode = 'bot';
+          document.getElementById('modeText').innerText = 'Против ИИ';
+          document.getElementById('modeIcon').innerText = '🤖';
+          document.getElementById('matchmakingModal').classList.add('hidden');
+          mainMenuModal.classList.add('hidden');
+          initGame();
+        });
+      }
+
+      document.getElementById('btnMenuInviteDuel').addEventListener('click', () => shareGameInTelegram(true));
+      document.getElementById('btnMenuShareGameReward').addEventListener('click', () => shareGameInTelegram(true));
       document.getElementById('btnQuickInviteHeader').addEventListener('click', () => shareGameInTelegram(true));
-      document.getElementById('btnQuestInviteFriend').addEventListener('click', () => shareGameInTelegram(false));
+      document.getElementById('btnQuestInviteFriend').addEventListener('click', () => shareGameInTelegram(true));
       document.getElementById('btnTelegramShare').addEventListener('click', () => shareGameInTelegram(true));
 
       document.getElementById('btnAddGameToHome').addEventListener('click', () => addGameToHomeScreen());
@@ -2533,27 +2889,32 @@
       });
 
       document.getElementById('btnConnectRoom').addEventListener('click', () => {
-        const targetId = document.getElementById('inputTargetRoomId').value.trim();
-        if (!targetId || !peer) return;
+        const targetId = document.getElementById('inputTargetRoomId').value.trim().toUpperCase();
+        if (!targetId) return;
         document.getElementById('netStatusText').innerText = 'Подключение...';
-        const conn = peer.connect(targetId);
-        setupConnection(conn, true);
+        connectToRoomFromInvite(targetId);
       });
     }
 
     // --- INITIALIZE ON LOAD ---
     window.addEventListener('load', () => {
       loadProfile();
+      setupEventListeners();
       initYandexSDK();
       initTelegramApp();
       initPeerJS();
-      setupEventListeners();
       initDeck();
       for (let i = 0; i < 5; i++) {
         GameState.p1.hand.push(drawCard());
         GameState.p2.hand.push(drawCard());
       }
       updateUI();
+
+      if (pendingInviteRoomCode) {
+        const code = pendingInviteRoomCode;
+        pendingInviteRoomCode = null;
+        connectToRoomFromInvite(code);
+      }
     });
   </script>
 </body>
